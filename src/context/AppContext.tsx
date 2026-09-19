@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   AppMode,
   DocumentItem,
@@ -18,7 +18,7 @@ import {
   demoEmergencyPlans,
   demoReadiness
 } from '../data/demoData';
-import { createCrisisSession, getScenario } from '../lib/crisisEngine';
+import { createCrisisSession } from '../lib/crisisEngine';
 
 interface AppContextType {
   crisisActive: boolean;
@@ -55,42 +55,81 @@ interface AppContextType {
   addTimelineEvent: (title: string, description: string, type: TimelineEvent['type']) => void;
 }
 
+interface SavedAppState {
+  mode: AppMode;
+  selectedPlanId: string;
+  crisisSession: CrisisSession;
+  temporaryAccessRecords: SecureAccessRecord[];
+}
+
+const STORAGE_KEY = 'cs_app_state';
+
+const loadSavedState = (): SavedAppState | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to parse cs_app_state:', err);
+    return null;
+  }
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<AppMode>('dormant');
+  const saved = loadSavedState();
+
+  const [mode, setMode] = useState<AppMode>(saved?.mode || 'dormant');
   const [dormantNotification, setDormantNotification] = useState<string | null>(null);
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-auto-accident');
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(saved?.selectedPlanId || 'plan-auto-accident');
   
-  // Initial crisis session generated via Context Engine
+  // Initial crisis session loaded from storage or generated via Context Engine
   const [crisisSession, setCrisisSession] = useState<CrisisSession>(() => 
-    createCrisisSession('plan-auto-accident')
+    saved?.crisisSession || createCrisisSession('plan-auto-accident')
   );
 
-  const [temporaryAccessRecords, setTemporaryAccessRecords] = useState<SecureAccessRecord[]>([
-    {
-      id: 'acc-101',
-      recipient: 'Rahul Morgan',
-      documents: ['Vehicle Insurance Policy', 'Vehicle Registration (RC)'],
-      expiration: '24 hours',
-      status: 'Active',
-      createdAt: 'Today, 10:05 AM'
-    },
-    {
-      id: 'acc-102',
-      recipient: 'National Insurance Adjuster',
-      documents: ['Vehicle Insurance Policy'],
-      expiration: '12 hours',
-      status: 'Active',
-      createdAt: 'Today, 10:12 AM'
-    }
-  ]);
+  const [temporaryAccessRecords, setTemporaryAccessRecords] = useState<SecureAccessRecord[]>(() =>
+    saved?.temporaryAccessRecords || [
+      {
+        id: 'acc-101',
+        recipient: 'Rahul Morgan',
+        documents: ['Vehicle Insurance Policy', 'Vehicle Registration (RC)'],
+        expiration: '24 hours',
+        status: 'Active',
+        createdAt: 'Today, 10:05 AM'
+      },
+      {
+        id: 'acc-102',
+        recipient: 'National Insurance Adjuster',
+        documents: ['Vehicle Insurance Policy'],
+        expiration: '12 hours',
+        status: 'Active',
+        createdAt: 'Today, 10:12 AM'
+      }
+    ]
+  );
 
   const [documents] = useState<DocumentItem[]>(demoDocuments);
   const [assets] = useState<AssetItem[]>(demoAssets);
   const [contacts] = useState<EmergencyContact[]>(demoEmergencyContacts);
   const [plans] = useState<EmergencyPlan[]>(demoEmergencyPlans);
   const [readiness] = useState<ReadinessOverview>(demoReadiness);
+
+  // Sync core crisis & active state changes to localStorage
+  useEffect(() => {
+    try {
+      const stateToSave: SavedAppState = {
+        mode,
+        selectedPlanId,
+        crisisSession,
+        temporaryAccessRecords
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (err) {
+      console.error('Failed to persist cs_app_state:', err);
+    }
+  }, [mode, selectedPlanId, crisisSession, temporaryAccessRecords]);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
   const crisisActive = mode === 'crisis';
@@ -132,7 +171,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: `evt-${Date.now()}-end`,
           timestamp: now,
           title: 'Crisis ended',
-          description: `Crisis mode deactivated by Alex Morgan. All temporary access records expired. Shadow returned to standby.`,
+          description: `Crisis mode deactivated by user. All temporary access records expired. Shadow returned to standby.`,
           type: 'status_change'
         },
         ...prev.timelineEvents
