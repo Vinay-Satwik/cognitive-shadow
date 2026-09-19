@@ -19,12 +19,18 @@ export const Landing: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
+            className="px-4 py-2 rounded-xl hover:bg-white/[0.04] text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          >
+            Dashboard
+          </button>
           {isAuthenticated ? (
             <button
               onClick={() => navigate('/dashboard')}
               className="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-xs font-mono text-cyan-300 border border-cyan-500/30 transition-colors flex items-center gap-2 group cursor-pointer"
             >
-              <span>Dashboard</span>
+              <span>Enter Shadow</span>
               <ArrowRight className="w-3.5 h-3.5 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
             </button>
           ) : (
@@ -70,12 +76,12 @@ export const Landing: React.FC = () => {
               onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
               className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-sm font-medium border border-cyan-500/30 transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(6,182,212,0.15)] group cursor-pointer"
             >
-              <span>{isAuthenticated ? 'Enter Shadow Dashboard' : 'Enter Shadow'}</span>
+              <span>Enter Shadow Dashboard</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
 
             <button
-              onClick={() => navigate('/simulator')}
+              onClick={() => navigate(isAuthenticated ? '/simulator' : '/login')}
               className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-sm font-light border border-white/[0.06] transition-colors cursor-pointer"
             >
               View Simulator

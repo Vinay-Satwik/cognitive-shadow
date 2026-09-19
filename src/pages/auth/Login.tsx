@@ -8,8 +8,8 @@ export const Login: React.FC = () => {
   const location = useLocation();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('alex.morgan@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,8 +21,12 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      const user = await login(email, password);
+      if (!user.hasCompletedOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: any) {
       setError(err?.message || 'Invalid email or password.');
     } finally {
@@ -76,7 +80,7 @@ export const Login: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="alex.morgan@example.com"
+                  placeholder="name@example.com"
                   className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
                 />
               </div>

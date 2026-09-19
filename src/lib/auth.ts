@@ -64,24 +64,29 @@ function saveRegisteredUsers(users: User[]): void {
 
 export const authService = {
   /**
-   * Get current session from local storage or null if unauthenticated
+   * Get current session from local storage or null if unauthenticated.
+   * Signed out by default for a new browser / session.
    */
   getSession(): AuthSession {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.user) {
+          return {
+            user: parsed.user,
+            token: parsed.token || 'mock-jwt-token'
+          };
+        }
       }
     } catch (e) {
       console.warn('Failed to parse auth session from localStorage', e);
     }
-    // Default active demo session for prototype inspection
-    const defaultSession: AuthSession = {
-      user: DEMO_USER,
-      token: 'mock-jwt-token-' + Date.now()
+    // Signed out by default
+    return {
+      user: null,
+      token: null
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultSession));
-    return defaultSession;
   },
 
   /**
@@ -184,11 +189,7 @@ export const authService = {
    */
   async logout(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 150));
-    const emptySession: AuthSession = {
-      user: null,
-      token: null
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(emptySession));
+    localStorage.removeItem(STORAGE_KEY);
   },
 
   /**

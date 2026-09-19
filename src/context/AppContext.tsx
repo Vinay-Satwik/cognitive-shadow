@@ -13,7 +13,7 @@ import {
   TimelineEvent,
   UserProfile
 } from '../types';
-import { storageService, AppStoreData } from '../services/storageService';
+import { storageService, getDefaultStoreData, AppStoreData } from '../services/storageService';
 import { readinessEngine } from '../services/readinessEngine';
 import { contextEngine } from '../services/contextEngine';
 import { createCrisisSession } from '../lib/crisisEngine';
@@ -95,8 +95,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Hydrate initial store from storageService based on active authenticated user
   const initialStore = useMemo(() => {
-    const activeUserId = user?.id || 'usr-alex-morgan';
-    return storageService.load(activeUserId, user || undefined);
+    if (!user) {
+      return getDefaultStoreData('unauthenticated', { name: 'Guest', email: '' });
+    }
+    return storageService.load(user.id, user);
   }, []);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(initialStore.userProfile);
@@ -114,7 +116,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronize store when authenticated user changes
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      const guestStore = getDefaultStoreData('unauthenticated', { name: 'Guest', email: '' });
+      setUserProfile(guestStore.userProfile);
+      setDocuments(guestStore.documents);
+      setAssets(guestStore.assets);
+      setContacts(guestStore.contacts);
+      setPlans(guestStore.plans);
+      setCrisisSession(guestStore.crisisSession);
+      setTemporaryAccessRecords(guestStore.temporaryAccessRecords);
+      setMode(guestStore.mode);
+      setSelectedPlanId(guestStore.selectedPlanId);
+      return;
+    }
     const store = storageService.load(user.id, user);
     setUserProfile(store.userProfile);
     setDocuments(store.documents);
@@ -134,6 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Persist current state whenever any data or active session changes
   useEffect(() => {
+    if (!user) return; // Never overwrite or persist storage when signed out
     const dataToSave: AppStoreData = {
       version: 2,
       userProfile,
@@ -146,8 +161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mode,
       selectedPlanId
     };
-    const activeUserId = user?.id || userProfile.userId || 'usr-alex-morgan';
-    storageService.save(dataToSave, activeUserId);
+    storageService.save(dataToSave, user.id);
   }, [
     user?.id,
     userProfile,
@@ -613,8 +627,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Reset to Demo Data ---
   const resetToDemoData = () => {
-    const activeUserId = user?.id || userProfile.userId || 'usr-alex-morgan';
-    const fresh = storageService.reset(activeUserId, userProfile);
+    if (!user) return;
+    const fresh = storageService.reset(user.id, userProfile);
     setUserProfile(fresh.userProfile);
     setDocuments(fresh.documents);
     setAssets(fresh.assets);

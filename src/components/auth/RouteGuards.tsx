@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -21,17 +21,30 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // If authenticated user has not completed onboarding, force them to /onboarding
+  if (!user?.hasCompletedOnboarding && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // If authenticated user has already completed onboarding, block re-entry to /onboarding
+  if (user?.hasCompletedOnboarding && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 
 export const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return null;
   }
 
   if (isAuthenticated) {
+    if (!user?.hasCompletedOnboarding) {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
