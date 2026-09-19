@@ -70,7 +70,7 @@ export const CrisisOverview: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 text-xs font-mono">
           <div>
             <span className="text-zinc-500 block text-[10px] uppercase">Person</span>
-            <span className="text-white font-medium text-sm">{userProfile?.name || 'Alex Morgan'}</span>
+            <span className="text-white font-medium text-sm">{userProfile?.name || 'Authorized Account Holder'}</span>
           </div>
 
           <div>

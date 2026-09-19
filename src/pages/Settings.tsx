@@ -30,13 +30,22 @@ export const Settings: React.FC = () => {
   } = useApp();
 
   // Profile fields
-  const [name, setName] = useState(userProfile?.name || user?.name || 'Alex Morgan');
-  const [email, setEmail] = useState(userProfile?.email || user?.email || 'alex.morgan@shadowops.internal');
-  const [bloodGroup, setBloodGroup] = useState(userProfile?.bloodGroup || 'O+ (Universal Donor)');
-  const [allergies, setAllergies] = useState(userProfile?.allergies || 'Penicillin, Cephalosporins');
-  const [medicalNotes, setMedicalNotes] = useState(
-    userProfile?.medicalNotes || 'Asthma inhaler in travel bag. Advance medical directive on file.'
-  );
+  const [name, setName] = useState(userProfile?.name || user?.name || '');
+  const [email, setEmail] = useState(userProfile?.email || user?.email || '');
+  const [bloodGroup, setBloodGroup] = useState(userProfile?.bloodGroup || '');
+  const [allergies, setAllergies] = useState(userProfile?.allergies || '');
+  const [medicalNotes, setMedicalNotes] = useState(userProfile?.medicalNotes || '');
+
+  // Keep fields synchronized if userProfile changes
+  React.useEffect(() => {
+    if (userProfile) {
+      setName(userProfile.name || user?.name || '');
+      setEmail(userProfile.email || user?.email || '');
+      setBloodGroup(userProfile.bloodGroup || '');
+      setAllergies(userProfile.allergies || '');
+      setMedicalNotes(userProfile.medicalNotes || '');
+    }
+  }, [userProfile, user]);
 
   // Security fields
   const [twoStepTrigger, setTwoStepTrigger] = useState(true);

@@ -9,7 +9,7 @@ export const CrisisTasks: React.FC = () => {
 
   const peopleOptions = [
     ...(contacts.map((c) => c.name)),
-    `${userProfile?.name || 'Alex Morgan'} (Myself)`
+    `${userProfile?.name || 'Primary Account Holder'} (Myself)`
   ];
 
   return (

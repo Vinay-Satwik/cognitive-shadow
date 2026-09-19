@@ -31,9 +31,9 @@ export const EmergencyBrief: React.FC = () => {
     const text = [
       `WHAT YOU NEED TO KNOW RIGHT NOW`,
       `Incident: ${crisisSession.scenario}`,
-      `Person: ${userProfile?.name || 'Alex Morgan'}`,
-      isMedicalEmergency ? `Blood Group: ${userProfile?.bloodGroup || 'O+'}` : '',
-      isMedicalEmergency ? `Allergies: ${userProfile?.allergies || 'Penicillin'}` : '',
+      `Person: ${userProfile?.name || 'Authorized Account Holder'}`,
+      isMedicalEmergency ? `Blood Group: ${userProfile?.bloodGroup || 'Not Specified'}` : '',
+      isMedicalEmergency ? `Allergies: ${userProfile?.allergies || 'None declared'}` : '',
       `Primary Contact: ${primaryContact ? `${primaryContact.name} (${primaryContact.phone})` : 'Not Set'}`,
       primaryAsset ? `Important Asset: ${primaryAsset.name} (${primaryAsset.registrationOrSerial})` : '',
       `Insurance: ${crisisSession.insurancePolicyName}`,
@@ -116,7 +116,7 @@ export const EmergencyBrief: React.FC = () => {
               Person
             </span>
             <div className="text-lg font-medium text-white print:text-black">
-              {userProfile?.name || 'Alex Morgan'}
+              {userProfile?.name || 'Authorized Account Holder'}
             </div>
             <div className="text-xs text-zinc-400 font-mono print:text-gray-500">
               Identity Verified

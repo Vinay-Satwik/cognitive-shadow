@@ -1,9 +1,10 @@
 /**
  * Cognitive Shadow Central Storage Service
  * 
- * Versioned local persistence layer.
+ * Versioned local persistence layer with strict user data isolation.
+ * Every record is associated with the authenticated user's userId.
  * Clean abstraction allowing straightforward replacement with Supabase
- * or a remote backend.
+ * queries and Row Level Security (RLS).
  */
 
 import {
@@ -42,6 +43,7 @@ export interface AppStoreData {
 
 export const defaultUserProfile: UserProfile = {
   id: 'usr-alex-morgan',
+  userId: 'usr-alex-morgan',
   name: 'Alex Morgan',
   email: 'alex.morgan@shadowops.internal',
   phone: '+1 (555) 382-9901',
@@ -57,6 +59,7 @@ export const defaultUserProfile: UserProfile = {
 export const defaultAccessRecords: SecureAccess[] = [
   {
     id: 'acc-101',
+    userId: 'usr-alex-morgan',
     recipient: 'Rahul Morgan',
     recipientEmail: 'rahul.morgan@example.com',
     documents: ['Vehicle Insurance Policy', 'Vehicle Registration (RC)'],
@@ -66,6 +69,7 @@ export const defaultAccessRecords: SecureAccess[] = [
   },
   {
     id: 'acc-102',
+    userId: 'usr-alex-morgan',
     recipient: 'National Insurance Adjuster',
     recipientEmail: 'claims@insurancecorp.example',
     documents: ['Vehicle Insurance Policy'],
@@ -75,57 +79,138 @@ export const defaultAccessRecords: SecureAccess[] = [
   }
 ];
 
-export const getDefaultStoreData = (): AppStoreData => {
+export function getUserStorageKey(userId: string): string {
+  return `${STORE_STORAGE_KEY}_${userId}`;
+}
+
+/**
+ * Generate fresh baseline data for a given user.
+ * Demo accounts get seed records; new users start with clean, unpolluted data.
+ */
+export const getDefaultStoreData = (userId = 'usr-alex-morgan', initialProfile?: Partial<UserProfile>): AppStoreData => {
+  const isDemo = userId === 'usr-alex-morgan' || initialProfile?.email?.toLowerCase().includes('alex.morgan');
+
+  if (isDemo) {
+    return {
+      version: CURRENT_STORE_VERSION,
+      userProfile: { ...defaultUserProfile, userId },
+      documents: demoDocuments.map((d) => ({ ...d, userId })),
+      assets: demoAssets.map((a) => ({ ...a, userId })),
+      contacts: demoEmergencyContacts.map((c) => ({ ...c, userId })),
+      plans: demoEmergencyPlans.map((p) => ({ ...p, userId })),
+      crisisSession: createCrisisSession('plan-auto-accident', 'Alex Morgan', userId),
+      temporaryAccessRecords: defaultAccessRecords.map((a) => ({ ...a, userId })),
+      mode: 'dormant',
+      selectedPlanId: 'plan-auto-accident'
+    };
+  }
+
+  // Clean slate for new registered user
+  const newProfile: UserProfile = {
+    id: userId,
+    userId,
+    name: initialProfile?.name || 'Registered User',
+    email: initialProfile?.email || '',
+    phone: initialProfile?.phone || '',
+    bloodGroup: initialProfile?.bloodGroup || '',
+    allergies: initialProfile?.allergies || '',
+    medicalNotes: initialProfile?.medicalNotes || '',
+    emergencyDirective: initialProfile?.emergencyDirective || '',
+    primaryLocation: initialProfile?.primaryLocation || '',
+    hasCompletedOnboarding: initialProfile?.hasCompletedOnboarding || false,
+    createdAt: new Date().toISOString()
+  };
+
+  const userPlans: EmergencyPlan[] = demoEmergencyPlans.map((p) => ({
+    ...p,
+    id: `${p.id}`,
+    userId,
+    relevantDocuments: [],
+    relevantAssets: [],
+    relevantContacts: []
+  }));
+
   return {
     version: CURRENT_STORE_VERSION,
-    userProfile: { ...defaultUserProfile },
-    documents: JSON.parse(JSON.stringify(demoDocuments)),
-    assets: JSON.parse(JSON.stringify(demoAssets)),
-    contacts: JSON.parse(JSON.stringify(demoEmergencyContacts)),
-    plans: JSON.parse(JSON.stringify(demoEmergencyPlans)),
-    crisisSession: createCrisisSession('plan-auto-accident'),
-    temporaryAccessRecords: [...defaultAccessRecords],
+    userProfile: newProfile,
+    documents: [],
+    assets: [],
+    contacts: [],
+    plans: userPlans,
+    crisisSession: createCrisisSession('plan-auto-accident', newProfile.name, userId),
+    temporaryAccessRecords: [],
     mode: 'dormant',
-    selectedPlanId: 'plan-auto-accident'
+    selectedPlanId: userPlans[0]?.id || 'plan-auto-accident'
   };
 };
 
 export const storageService = {
   /**
-   * Load store data from local storage with graceful fallback to demo baseline
+   * Load store data for a specific user from localStorage with isolated fallback
    */
-  load(): AppStoreData {
+  load(userId?: string, initialProfile?: Partial<UserProfile>): AppStoreData {
+    const effectiveUserId = userId || 'usr-alex-morgan';
+    const userKey = getUserStorageKey(effectiveUserId);
+
     try {
-      const raw = localStorage.getItem(STORE_STORAGE_KEY);
-      if (!raw) {
-        const initial = getDefaultStoreData();
-        this.save(initial);
-        return initial;
+      const raw = localStorage.getItem(userKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as AppStoreData;
+        if (parsed.documents && parsed.assets && parsed.contacts && parsed.plans && parsed.userProfile) {
+          // Ensure every record is tagged with the current userId
+          parsed.userProfile.userId = effectiveUserId;
+          parsed.documents = parsed.documents.map((d) => ({ ...d, userId: d.userId || effectiveUserId }));
+          parsed.assets = parsed.assets.map((a) => ({ ...a, userId: a.userId || effectiveUserId }));
+          parsed.contacts = parsed.contacts.map((c) => ({ ...c, userId: c.userId || effectiveUserId }));
+          parsed.plans = parsed.plans.map((p) => ({ ...p, userId: p.userId || effectiveUserId }));
+          if (parsed.crisisSession) parsed.crisisSession.userId = effectiveUserId;
+          return parsed;
+        }
       }
 
-      const parsed = JSON.parse(raw) as AppStoreData;
-      
-      // Basic integrity check
-      if (!parsed.documents || !parsed.assets || !parsed.contacts || !parsed.plans) {
-        const fallback = getDefaultStoreData();
-        this.save(fallback);
-        return fallback;
+      // Check legacy single-key store if this is the demo user
+      if (effectiveUserId === 'usr-alex-morgan') {
+        const legacyRaw = localStorage.getItem(STORE_STORAGE_KEY);
+        if (legacyRaw) {
+          const parsed = JSON.parse(legacyRaw) as AppStoreData;
+          if (parsed.documents && parsed.assets && parsed.contacts && parsed.plans) {
+            this.save(parsed, effectiveUserId);
+            return parsed;
+          }
+        }
       }
 
-      return parsed;
+      // Generate initial baseline for this user
+      const initial = getDefaultStoreData(effectiveUserId, initialProfile);
+      this.save(initial, effectiveUserId);
+      return initial;
     } catch (err) {
-      console.error('[storageService] Failed to load data from storage, resetting to default:', err);
-      const fallback = getDefaultStoreData();
-      this.save(fallback);
+      console.error('[storageService] Failed to load user store, initializing default:', err);
+      const fallback = getDefaultStoreData(effectiveUserId, initialProfile);
+      this.save(fallback, effectiveUserId);
       return fallback;
     }
   },
 
   /**
-   * Persist current state to localStorage
+   * Persist current state to localStorage, isolated by user
    */
-  save(data: AppStoreData): void {
+  save(data: AppStoreData, userId?: string): void {
+    const effectiveUserId = userId || data.userProfile?.userId || data.userProfile?.id || 'usr-alex-morgan';
+    const userKey = getUserStorageKey(effectiveUserId);
+
     try {
+      // Stamp userId on all collections
+      data.userProfile.userId = effectiveUserId;
+      data.documents = data.documents.map((d) => ({ ...d, userId: d.userId || effectiveUserId }));
+      data.assets = data.assets.map((a) => ({ ...a, userId: a.userId || effectiveUserId }));
+      data.contacts = data.contacts.map((c) => ({ ...c, userId: c.userId || effectiveUserId }));
+      data.plans = data.plans.map((p) => ({ ...p, userId: p.userId || effectiveUserId }));
+      if (data.crisisSession) data.crisisSession.userId = effectiveUserId;
+      data.temporaryAccessRecords = data.temporaryAccessRecords.map((r) => ({ ...r, userId: r.userId || effectiveUserId }));
+
+      localStorage.setItem(userKey, JSON.stringify(data));
+      // Also update generic key for convenience
       localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(data));
     } catch (err) {
       console.error('[storageService] Failed to persist data to storage:', err);
@@ -133,11 +218,12 @@ export const storageService = {
   },
 
   /**
-   * Reset store back to fresh default demo state
+   * Reset store back to fresh baseline state for this user
    */
-  reset(): AppStoreData {
-    const fresh = getDefaultStoreData();
-    this.save(fresh);
+  reset(userId?: string, initialProfile?: Partial<UserProfile>): AppStoreData {
+    const effectiveUserId = userId || 'usr-alex-morgan';
+    const fresh = getDefaultStoreData(effectiveUserId, initialProfile);
+    this.save(fresh, effectiveUserId);
     return fresh;
   },
 

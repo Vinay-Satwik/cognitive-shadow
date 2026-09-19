@@ -48,14 +48,16 @@ export const Topbar: React.FC<{ onOpenMobileMenu: () => void }> = ({ onOpenMobil
     navigate('/login');
   };
 
+  const userDisplayName = user?.name || 'Authorized User';
   const userInitials = user?.name
     ? user.name
         .split(' ')
+        .filter(Boolean)
         .map((n) => n[0])
         .join('')
         .toUpperCase()
-        .slice(0, 2)
-    : 'AM';
+        .slice(0, 2) || 'CS'
+    : 'CS';
 
   return (
     <>
@@ -147,7 +149,7 @@ export const Topbar: React.FC<{ onOpenMobileMenu: () => void }> = ({ onOpenMobil
                 {userInitials}
               </div>
               <span className="hidden md:inline-block font-mono text-zinc-300 text-xs">
-                {user?.name || 'Alex Morgan'}
+                {userDisplayName}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400 hidden sm:block" />
             </button>
@@ -158,10 +160,10 @@ export const Topbar: React.FC<{ onOpenMobileMenu: () => void }> = ({ onOpenMobil
                 {/* User Identity Info */}
                 <div className="px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-sm font-medium text-white truncate">
-                    {user?.name || 'Alex Morgan'}
+                    {userDisplayName}
                   </p>
                   <p className="text-xs font-mono text-zinc-400 truncate mt-0.5">
-                    {user?.email || 'alex.morgan@shadowops.internal'}
+                    {user?.email || 'standby-protected@shadow.vault'}
                   </p>
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

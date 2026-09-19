@@ -11,6 +11,7 @@ export type DocumentCategory =
 
 export interface UserProfile {
   id: string;
+  userId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -27,6 +28,7 @@ export interface UserProfile {
 
 export interface Document {
   id: string;
+  userId?: string;
   name: string;
   category: DocumentCategory;
   description: string;
@@ -45,6 +47,7 @@ export type DocumentItem = Document;
 
 export interface Asset {
   id: string;
+  userId?: string;
   name: string;
   type: string;
   registrationOrSerial: string;
@@ -61,6 +64,7 @@ export type AssetItem = Asset;
 
 export interface EmergencyContact {
   id: string;
+  userId?: string;
   name: string;
   relationship: string;
   phone: string;
@@ -86,6 +90,7 @@ export type DefaultTask = PlanTask;
 
 export interface EmergencyPlan {
   id: string;
+  userId?: string;
   name: string;
   emoji: string;
   description: string;
@@ -102,6 +107,7 @@ export type CrisisTaskPriority = 'Critical' | 'High' | 'Medium';
 
 export interface CrisisTask {
   id: string;
+  userId?: string;
   title: string;
   description: string;
   assignedTo: string;
@@ -111,6 +117,7 @@ export interface CrisisTask {
 
 export interface TimelineEvent {
   id: string;
+  userId?: string;
   timestamp: string;
   title: string;
   description: string;
@@ -127,6 +134,7 @@ export interface TimelineEvent {
 
 export interface SecureAccess {
   id: string;
+  userId?: string;
   recipient: string;
   recipientEmail?: string;
   documents: string[];
@@ -141,6 +149,7 @@ export type SecureAccessRecord = SecureAccess;
 
 export interface CrisisSession {
   id: string;
+  userId?: string;
   scenarioId: string;
   scenario: string;
   scenarioEmoji: string;

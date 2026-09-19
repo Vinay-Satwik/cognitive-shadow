@@ -14,9 +14,11 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     readiness,
     documents,
@@ -28,6 +30,17 @@ export const Dashboard: React.FC = () => {
     dormantNotification,
     clearDormantNotification
   } = useApp();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const timeGreeting = getGreeting();
+  const fullName = userProfile?.name || user?.name || 'User';
+  const firstName = fullName.trim().split(' ')[0] || 'User';
 
   return (
     <div className="space-y-12 max-w-5xl">
@@ -66,7 +79,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-white">
-              Good evening, <span className="font-normal text-zinc-100">{userProfile?.name ? userProfile.name.split(' ')[0] : 'Alex'}</span>.
+              {timeGreeting}, <span className="font-normal text-zinc-100">{firstName}</span>.
             </h1>
 
             <p className="text-base sm:text-lg text-zinc-400 font-light max-w-xl leading-relaxed">

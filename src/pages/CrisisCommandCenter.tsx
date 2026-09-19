@@ -5,12 +5,12 @@ import { useApp } from '../context/AppContext';
 
 export const CrisisCommandCenter: React.FC = () => {
   const navigate = useNavigate();
-  const { crisisSession, endCrisis, toggleTaskStatus, documents, contacts, assets } = useApp();
+  const { crisisSession, endCrisis, toggleTaskStatus, documents, contacts, assets, userProfile } = useApp();
 
   const surfacedDocs = documents.filter((d) => crisisSession.surfacedDocuments.includes(d.id));
   const involvedContacts = contacts.filter((c) => crisisSession.involvedContacts.includes(c.id));
   const primaryContact = contacts.find((c) => c.primary) || contacts[0];
-  const primaryAsset = assets.find((a) => a.name.includes('Honda') || a.type.includes('Auto')) || assets[0];
+  const primaryAsset = assets.find((a) => a.id === crisisSession.primaryAssetId) || assets[0];
 
   return (
     <div className="space-y-12 max-w-4xl">
@@ -48,12 +48,12 @@ export const CrisisCommandCenter: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-zinc-300">
           <div>
             <span className="text-zinc-500 block text-[10px] uppercase">Person</span>
-            <span className="text-white font-medium text-sm">Alex Morgan</span>
+            <span className="text-white font-medium text-sm">{userProfile?.name || 'Authorized Account Holder'}</span>
           </div>
 
           <div>
             <span className="text-zinc-500 block text-[10px] uppercase">Primary Contact</span>
-            <span className="text-white font-medium text-sm">{primaryContact.name}</span>
+            <span className="text-white font-medium text-sm">{primaryContact ? primaryContact.name : 'Designated Proxy'}</span>
           </div>
 
           <div>

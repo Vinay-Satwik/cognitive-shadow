@@ -17,6 +17,7 @@ import { storageService, AppStoreData } from '../services/storageService';
 import { readinessEngine } from '../services/readinessEngine';
 import { contextEngine } from '../services/contextEngine';
 import { createCrisisSession } from '../lib/crisisEngine';
+import { useAuth } from './AuthContext';
 
 interface AppContextType {
   // Mode & System State
@@ -36,24 +37,28 @@ interface AppContextType {
 
   // Documents CRUD
   documents: Document[];
+  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>;
   addDocument: (doc: Omit<Document, 'id' | 'uploadDate'>) => void;
   updateDocument: (id: string, doc: Partial<Document>) => void;
   deleteDocument: (id: string) => void;
 
   // Assets CRUD
   assets: Asset[];
+  setAssets: React.Dispatch<React.SetStateAction<Asset[]>>;
   addAsset: (asset: Omit<Asset, 'id'>) => void;
   updateAsset: (id: string, asset: Partial<Asset>) => void;
   deleteAsset: (id: string) => void;
 
   // Emergency Contacts CRUD
   contacts: EmergencyContact[];
+  setContacts: React.Dispatch<React.SetStateAction<EmergencyContact[]>>;
   addContact: (contact: Omit<EmergencyContact, 'id'>) => void;
   updateContact: (id: string, contact: Partial<EmergencyContact>) => void;
   deleteContact: (id: string) => void;
 
   // Emergency Plans CRUD
   plans: EmergencyPlan[];
+  setPlans: React.Dispatch<React.SetStateAction<EmergencyPlan[]>>;
   addPlan: (plan: Omit<EmergencyPlan, 'id'>) => void;
   updatePlan: (id: string, plan: Partial<EmergencyPlan>) => void;
   deletePlan: (id: string) => void;
@@ -86,8 +91,13 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Hydrate initial store from storageService (versioned key)
-  const initialStore = useMemo(() => storageService.load(), []);
+  const { user, updateProfile: updateAuthProfile } = useAuth();
+
+  // Hydrate initial store from storageService based on active authenticated user
+  const initialStore = useMemo(() => {
+    const activeUserId = user?.id || 'usr-alex-morgan';
+    return storageService.load(activeUserId, user || undefined);
+  }, []);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(initialStore.userProfile);
   const [documents, setDocuments] = useState<Document[]>(initialStore.documents);
@@ -101,6 +111,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [mode, setMode] = useState<AppMode>(initialStore.mode);
   const [selectedPlanId, setSelectedPlanId] = useState<string>(initialStore.selectedPlanId);
   const [dormantNotification, setDormantNotification] = useState<string | null>(null);
+
+  // Synchronize store when authenticated user changes
+  useEffect(() => {
+    if (!user) return;
+    const store = storageService.load(user.id, user);
+    setUserProfile(store.userProfile);
+    setDocuments(store.documents);
+    setAssets(store.assets);
+    setContacts(store.contacts);
+    setPlans(store.plans);
+    setCrisisSession(store.crisisSession);
+    setTemporaryAccessRecords(store.temporaryAccessRecords);
+    setMode(store.mode);
+    setSelectedPlanId(store.selectedPlanId);
+  }, [user?.id]);
 
   // Compute Readiness Dynamically from actual living data
   const readiness = useMemo(() => {
@@ -121,8 +146,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mode,
       selectedPlanId
     };
-    storageService.save(dataToSave);
+    const activeUserId = user?.id || userProfile.userId || 'usr-alex-morgan';
+    storageService.save(dataToSave, activeUserId);
   }, [
+    user?.id,
     userProfile,
     documents,
     assets,
@@ -150,11 +177,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Profile Operations ---
   const updateUserProfile = (updated: Partial<UserProfile>) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      ...updated,
-      updatedAt: new Date().toISOString()
-    }));
+    setUserProfile((prev) => {
+      const next = {
+        ...prev,
+        ...updated,
+        updatedAt: new Date().toISOString()
+      };
+      if (updateAuthProfile) {
+        updateAuthProfile({
+          name: next.name,
+          bloodGroup: next.bloodGroup,
+          allergies: next.allergies,
+          medicalNotes: next.medicalNotes,
+          hasCompletedOnboarding: next.hasCompletedOnboarding
+        }).catch((e) => console.warn('Auth sync failed:', e));
+      }
+      return next;
+    });
   };
 
   // --- Document Operations ---
@@ -163,10 +202,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const uploadDate = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
     const id = `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
 
     const docToAdd: Document = {
       ...newDoc,
       id,
+      userId: effectiveUserId,
       uploadDate
     };
 
@@ -237,9 +278,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Asset Operations ---
   const addAsset = (newAsset: Omit<Asset, 'id'>) => {
     const id = `ast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
     const assetToAdd: Asset = {
       ...newAsset,
-      id
+      id,
+      userId: effectiveUserId
     };
     setAssets((prev) => [assetToAdd, ...prev]);
   };
@@ -273,9 +316,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Contact Operations ---
   const addContact = (newContact: Omit<EmergencyContact, 'id'>) => {
     const id = `con-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
     const contactToAdd: EmergencyContact = {
       ...newContact,
-      id
+      id,
+      userId: effectiveUserId
     };
 
     setContacts((prev) => {
@@ -316,9 +361,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Plan Operations ---
   const addPlan = (newPlan: Omit<EmergencyPlan, 'id'>) => {
     const id = `plan-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
     const planToAdd: EmergencyPlan = {
       ...newPlan,
-      id
+      id,
+      userId: effectiveUserId
     };
     setPlans((prev) => [...prev, planToAdd]);
   };
@@ -354,13 +401,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       documents,
       assets,
       contacts,
-      planForScenario
+      planForScenario,
+      userProfile
     );
 
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
 
     const newSession: CrisisSession = {
       id: `crisis-${Date.now()}`,
+      userId: effectiveUserId,
       scenarioId: activeId,
       scenario: contextualData.emergencyBriefData.scenarioName,
       scenarioEmoji: contextualData.emergencyBriefData.scenarioEmoji,
@@ -371,10 +421,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       primaryContactId: contextualData.emergencyBriefData.primaryContact?.id,
       primaryAssetId: contextualData.emergencyBriefData.primaryAsset?.id,
       insurancePolicyName: contextualData.emergencyBriefData.insurancePolicyName,
-      tasks: contextualData.priorityTasks,
+      tasks: contextualData.priorityTasks.map((t) => ({ ...t, userId: effectiveUserId })),
       timelineEvents: [
         {
           id: `evt-${Date.now()}-1`,
+          userId: effectiveUserId,
           timestamp: now,
           title: 'Crisis activated',
           description: `${contextualData.emergencyBriefData.scenarioName} engaged. Cognitive Shadow entered Crisis Mode.`,
@@ -382,6 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         {
           id: `evt-${Date.now()}-2`,
+          userId: effectiveUserId,
           timestamp: now,
           title: 'Contextual reduction executed',
           description: `${contextualData.relevantDocuments.length} relevant documents and ${contextualData.relevantContacts.length} emergency contacts surfaced.`,
@@ -389,6 +441,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         {
           id: `evt-${Date.now()}-3`,
+          userId: effectiveUserId,
           timestamp: now,
           title: 'Tasks dispatched',
           description: `${contextualData.priorityTasks.length} priority tasks assigned to CareCircle.`,
@@ -407,6 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const endCrisis = () => {
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
 
     setTemporaryAccessRecords((prev) =>
       prev.map((rec) => ({ ...rec, status: 'Expired' as const }))
@@ -418,6 +472,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timelineEvents: [
         {
           id: `evt-${Date.now()}-end`,
+          userId: effectiveUserId,
           timestamp: now,
           title: 'Crisis ended',
           description: 'Crisis mode deactivated. All temporary access records expired. Shadow returned to standby.',
@@ -438,8 +493,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Interactive Crisis Actions ---
   const addTimelineEvent = (title: string, description: string, type: TimelineEvent['type']) => {
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
     const newEvent: TimelineEvent = {
       id: `evt-${Date.now()}`,
+      userId: effectiveUserId,
       timestamp: now,
       title,
       description,
@@ -515,8 +572,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createAccessRecord = (recipient: string, docNames: string[], expiration = '24 hours') => {
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const effectiveUserId = userProfile.userId || user?.id || 'usr-alex-morgan';
     const newRecord: SecureAccess = {
       id: `acc-${Math.floor(100 + Math.random() * 900)}`,
+      userId: effectiveUserId,
       recipient,
       documents: docNames,
       expiration,
@@ -554,7 +613,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Reset to Demo Data ---
   const resetToDemoData = () => {
-    const fresh = storageService.reset();
+    const activeUserId = user?.id || userProfile.userId || 'usr-alex-morgan';
+    const fresh = storageService.reset(activeUserId, userProfile);
     setUserProfile(fresh.userProfile);
     setDocuments(fresh.documents);
     setAssets(fresh.assets);
@@ -563,7 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCrisisSession(fresh.crisisSession);
     setTemporaryAccessRecords(fresh.temporaryAccessRecords);
     setMode('dormant');
-    setSelectedPlanId('plan-auto-accident');
+    setSelectedPlanId(fresh.selectedPlanId);
     setDormantNotification(null);
   };
 
@@ -580,18 +640,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedPlan,
         selectPlan,
         documents,
+        setDocuments,
         addDocument,
         updateDocument,
         deleteDocument,
         assets,
+        setAssets,
         addAsset,
         updateAsset,
         deleteAsset,
         contacts,
+        setContacts,
         addContact,
         updateContact,
         deleteContact,
         plans,
+        setPlans,
         addPlan,
         updatePlan,
         deletePlan,

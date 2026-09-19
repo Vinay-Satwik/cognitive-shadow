@@ -30,7 +30,7 @@ export function getRelevantAssets(scenarioId: string): AssetItem[] {
   return demoAssets.filter((asset) => scenario.relevantAssetIds.includes(asset.id));
 }
 
-export function createCrisisSession(scenarioId: string): CrisisSession {
+export function createCrisisSession(scenarioId: string, userName = 'User', userId?: string): CrisisSession {
   const scenario = getScenario(scenarioId);
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -38,13 +38,15 @@ export function createCrisisSession(scenarioId: string): CrisisSession {
   const initialTimelineEvents: TimelineEvent[] = [
     {
       id: `evt-${Date.now()}-1`,
+      userId,
       timestamp: timeString,
       title: 'Crisis activated',
-      description: `${scenario.name} engaged by Alex Morgan. Cognitive Shadow switched to Crisis Mode.`,
+      description: `${scenario.name} engaged by ${userName}. Cognitive Shadow switched to Crisis Mode.`,
       type: 'activation'
     },
     {
       id: `evt-${Date.now()}-2`,
+      userId,
       timestamp: timeString,
       title: 'Relevant information prepared',
       description: `${scenario.relevantDocumentIds.length} relevant documents and ${scenario.relevantContactIds.length} emergency contacts surfaced.`,
@@ -52,6 +54,7 @@ export function createCrisisSession(scenarioId: string): CrisisSession {
     },
     {
       id: `evt-${Date.now()}-3`,
+      userId,
       timestamp: timeString,
       title: 'Tasks assigned',
       description: `${scenario.priorityTasks.length} priority tasks dispatched to CareCircle.`,
@@ -61,6 +64,7 @@ export function createCrisisSession(scenarioId: string): CrisisSession {
 
   return {
     id: `crisis-${Date.now()}`,
+    userId,
     scenarioId: scenario.id,
     scenario: scenario.name,
     scenarioEmoji: scenario.emoji,
@@ -71,7 +75,7 @@ export function createCrisisSession(scenarioId: string): CrisisSession {
     primaryContactId: scenario.primaryContactId,
     primaryAssetId: scenario.primaryAssetId,
     insurancePolicyName: scenario.insurancePolicyName,
-    tasks: scenario.priorityTasks.map((task) => ({ ...task })),
+    tasks: scenario.priorityTasks.map((task) => ({ ...task, userId })),
     timelineEvents: initialTimelineEvents
   };
 }
