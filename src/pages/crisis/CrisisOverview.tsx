@@ -10,12 +10,16 @@ export const CrisisOverview: React.FC = () => {
   const { crisisSession, endCrisis, toggleTaskStatus, documents, contacts, assets } = useApp();
   const [showEndModal, setShowEndModal] = useState(false);
 
-  const scenarioDocs = getRelevantDocuments(crisisSession.scenarioId);
-  const scenarioPeople = getRelevantContacts(crisisSession.scenarioId);
-  const scenarioAssets = getRelevantAssets(crisisSession.scenarioId);
+  const scenarioDocs = documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id)).length > 0
+    ? documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id))
+    : getRelevantDocuments(crisisSession.scenarioId);
+
+  const scenarioPeople = contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id)).length > 0
+    ? contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id))
+    : getRelevantContacts(crisisSession.scenarioId);
 
   const primaryContact = contacts.find((c) => c.id === crisisSession.primaryContactId) || scenarioPeople[0] || contacts[0];
-  const primaryAsset = assets.find((a) => a.id === crisisSession.primaryAssetId) || scenarioAssets[0] || assets[0];
+  const primaryAsset = assets.find((a) => a.id === crisisSession.primaryAssetId) || assets[0];
 
   const handleEndCrisisConfirm = () => {
     setShowEndModal(false);

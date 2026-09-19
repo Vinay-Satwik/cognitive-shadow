@@ -6,9 +6,26 @@ export type DocumentCategory =
   | 'Insurance' 
   | 'Vehicle' 
   | 'Property' 
+  | 'Legal'
   | 'Other';
 
-export interface DocumentItem {
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  bloodGroup?: string;
+  allergies?: string;
+  medicalNotes?: string;
+  emergencyDirective?: string;
+  primaryLocation?: string;
+  hasCompletedOnboarding?: boolean;
+  avatar?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Document {
   id: string;
   name: string;
   category: DocumentCategory;
@@ -18,9 +35,15 @@ export interface DocumentItem {
   emergencyRelevance: 'Critical' | 'High' | 'Moderate' | 'Low';
   accessLevel?: string;
   uploadDate: string;
+  fileSize?: string;
+  fileType?: string;
+  tags?: string[];
 }
 
-export interface AssetItem {
+// Backwards compatibility alias
+export type DocumentItem = Document;
+
+export interface Asset {
   id: string;
   name: string;
   type: string;
@@ -29,8 +52,12 @@ export interface AssetItem {
   estimatedValue: string;
   insurance: string;
   warranty: string;
-  relatedDocuments: string[];
+  description?: string;
+  relatedDocuments: string[]; // Document names or IDs
 }
+
+// Backwards compatibility alias
+export type AssetItem = Asset;
 
 export interface EmergencyContact {
   id: string;
@@ -43,24 +70,30 @@ export interface EmergencyContact {
   verified: boolean;
   primary: boolean;
   medicalProxy: boolean;
+  avatar?: string;
 }
 
-export interface DefaultTask {
+export interface PlanTask {
   id: string;
   title: string;
+  description?: string;
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   defaultAssigneeRole?: string;
 }
+
+// Backwards compatibility alias
+export type DefaultTask = PlanTask;
 
 export interface EmergencyPlan {
   id: string;
   name: string;
   emoji: string;
   description: string;
+  scenario?: string;
   relevantDocuments: string[]; // document IDs
   relevantAssets: string[]; // asset IDs
   relevantContacts: string[]; // contact IDs
-  defaultTasks: DefaultTask[];
+  defaultTasks: PlanTask[];
   sharingRules: string[];
 }
 
@@ -92,14 +125,19 @@ export interface TimelineEvent {
     | 'status_change';
 }
 
-export interface SecureAccessRecord {
+export interface SecureAccess {
   id: string;
   recipient: string;
+  recipientEmail?: string;
   documents: string[];
   expiration: string;
   status: 'Active' | 'Revoked' | 'Expired';
   createdAt: string;
+  revokedAt?: string;
 }
+
+// Backwards compatibility alias
+export type SecureAccessRecord = SecureAccess;
 
 export interface CrisisSession {
   id: string;
@@ -143,6 +181,8 @@ export interface ReadinessCategory {
   name: 'Documents' | 'Contacts' | 'Emergency Plans' | 'Insurance' | 'Profile';
   score: number;
   detail: string;
+  contribution?: string;
+  reason?: string;
 }
 
 export interface ReadinessOverview {

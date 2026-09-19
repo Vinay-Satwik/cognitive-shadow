@@ -22,6 +22,7 @@ export const Dashboard: React.FC = () => {
     documents,
     contacts,
     plans,
+    userProfile,
     selectPlan,
     startActivation,
     dormantNotification,
@@ -65,7 +66,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-white">
-              Good evening, <span className="font-normal text-zinc-100">Alex</span>.
+              Good evening, <span className="font-normal text-zinc-100">{userProfile?.name ? userProfile.name.split(' ')[0] : 'Alex'}</span>.
             </h1>
 
             <p className="text-base sm:text-lg text-zinc-400 font-light max-w-xl leading-relaxed">
@@ -187,7 +188,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-3xl font-light text-cyan-300 font-mono">
-              94%
+              {readiness.overallScore}%
             </div>
             <div className="text-xs text-zinc-400 mt-1 font-light">
               Preparedness score

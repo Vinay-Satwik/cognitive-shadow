@@ -17,14 +17,26 @@ import { useApp } from '../context/AppContext';
 
 export const Settings: React.FC = () => {
   const { user, updateProfile } = useAuth();
-  const { documents, assets, contacts, plans, crisisSession, temporaryAccessRecords } = useApp();
+  const {
+    documents,
+    assets,
+    contacts,
+    plans,
+    crisisSession,
+    temporaryAccessRecords,
+    resetToDemoData,
+    updateUserProfile,
+    userProfile
+  } = useApp();
 
   // Profile fields
-  const [name, setName] = useState(user?.name || 'Alex Morgan');
-  const [email, setEmail] = useState(user?.email || 'alex.morgan@shadowops.internal');
-  const [bloodGroup, setBloodGroup] = useState('O+ (Universal Donor)');
-  const [allergies, setAllergies] = useState('Penicillin, Cephalosporins');
-  const [medicalNotes, setMedicalNotes] = useState('Asthma inhaler in travel bag. Advance medical directive on file.');
+  const [name, setName] = useState(userProfile?.name || user?.name || 'Alex Morgan');
+  const [email, setEmail] = useState(userProfile?.email || user?.email || 'alex.morgan@shadowops.internal');
+  const [bloodGroup, setBloodGroup] = useState(userProfile?.bloodGroup || 'O+ (Universal Donor)');
+  const [allergies, setAllergies] = useState(userProfile?.allergies || 'Penicillin, Cephalosporins');
+  const [medicalNotes, setMedicalNotes] = useState(
+    userProfile?.medicalNotes || 'Asthma inhaler in travel bag. Advance medical directive on file.'
+  );
 
   // Security fields
   const [twoStepTrigger, setTwoStepTrigger] = useState(true);
@@ -47,6 +59,13 @@ export const Settings: React.FC = () => {
 
   const handleSave = () => {
     updateProfile({ name, email });
+    updateUserProfile({
+      name,
+      email,
+      bloodGroup,
+      allergies,
+      medicalNotes
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -88,10 +107,8 @@ export const Settings: React.FC = () => {
   };
 
   const handleResetData = () => {
-    localStorage.removeItem('cs_app_state');
-    localStorage.removeItem('cs_app_data');
+    resetToDemoData();
     setResetConfirmOpen(false);
-    window.location.reload();
   };
 
   return (

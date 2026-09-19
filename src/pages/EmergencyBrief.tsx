@@ -6,15 +6,19 @@ import { getRelevantDocuments, getRelevantContacts, getRelevantAssets } from '..
 
 export const EmergencyBrief: React.FC = () => {
   const navigate = useNavigate();
-  const { crisisSession, contacts, assets } = useApp();
+  const { crisisSession, contacts, assets, documents, userProfile } = useApp();
   const [copied, setCopied] = useState(false);
 
-  const scenarioDocs = getRelevantDocuments(crisisSession.scenarioId);
-  const scenarioPeople = getRelevantContacts(crisisSession.scenarioId);
-  const scenarioAssets = getRelevantAssets(crisisSession.scenarioId);
+  const scenarioDocs = documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id)).length > 0
+    ? documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id))
+    : getRelevantDocuments(crisisSession.scenarioId);
+
+  const scenarioPeople = contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id)).length > 0
+    ? contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id))
+    : getRelevantContacts(crisisSession.scenarioId);
 
   const primaryContact = contacts.find((c) => c.id === crisisSession.primaryContactId) || scenarioPeople[0] || contacts[0];
-  const primaryAsset = assets.find((a) => a.id === crisisSession.primaryAssetId) || scenarioAssets[0];
+  const primaryAsset = assets.find((a) => a.id === crisisSession.primaryAssetId) || assets[0];
 
   const handleCopy = () => {
     const text = [

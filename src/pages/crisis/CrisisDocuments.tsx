@@ -5,11 +5,13 @@ import { getRelevantDocuments } from '../../lib/crisisEngine';
 import { DocumentItem } from '../../types';
 
 export const CrisisDocuments: React.FC = () => {
-  const { crisisSession } = useApp();
+  const { crisisSession, documents } = useApp();
   const [viewingDoc, setViewingDoc] = useState<DocumentItem | null>(null);
   const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
 
-  const scenarioDocs = getRelevantDocuments(crisisSession.scenarioId);
+  const scenarioDocs = documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id)).length > 0
+    ? documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id))
+    : getRelevantDocuments(crisisSession.scenarioId);
 
   const handleCopyDocDetails = (doc: DocumentItem) => {
     const text = `${doc.name}\nCategory: ${doc.category}\nDetails: ${doc.description}\nValid Through: ${doc.expiryDate || 'N/A'}`;

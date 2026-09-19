@@ -4,9 +4,11 @@ import { useApp } from '../../context/AppContext';
 import { getRelevantContacts } from '../../lib/crisisEngine';
 
 export const CrisisPeople: React.FC = () => {
-  const { crisisSession } = useApp();
+  const { crisisSession, contacts } = useApp();
 
-  const relevantPeople = getRelevantContacts(crisisSession.scenarioId);
+  const relevantPeople = contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id)).length > 0
+    ? contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id))
+    : getRelevantContacts(crisisSession.scenarioId);
 
   return (
     <div className="space-y-8 max-w-4xl">
