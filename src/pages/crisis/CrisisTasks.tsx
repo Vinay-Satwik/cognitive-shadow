@@ -4,14 +4,12 @@ import { useApp } from '../../context/AppContext';
 import { CrisisTask } from '../../types';
 
 export const CrisisTasks: React.FC = () => {
-  const { crisisSession, setTaskStatus, claimTask, contacts } = useApp();
+  const { crisisSession, setTaskStatus, claimTask, contacts, userProfile } = useApp();
   const [claimModalTask, setClaimModalTask] = useState<CrisisTask | null>(null);
 
   const peopleOptions = [
-    'Rahul Morgan',
-    'Priya Morgan',
-    'Dr. Mehta',
-    'Alex Morgan (Myself)'
+    ...(contacts.map((c) => c.name)),
+    `${userProfile?.name || 'Alex Morgan'} (Myself)`
   ];
 
   return (
@@ -33,7 +31,12 @@ export const CrisisTasks: React.FC = () => {
 
       {/* Interactive Task Cards */}
       <div className="space-y-4">
-        {crisisSession.tasks.map((task) => {
+        {crisisSession.tasks.length === 0 ? (
+          <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-zinc-400 text-xs font-mono">
+            No priority tasks defined for this crisis scenario.
+          </div>
+        ) : (
+          crisisSession.tasks.map((task) => {
           return (
             <div
               key={task.id}
@@ -112,7 +115,8 @@ export const CrisisTasks: React.FC = () => {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
 
       {/* Claim Reassignment Modal */}

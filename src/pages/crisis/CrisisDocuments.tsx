@@ -38,8 +38,13 @@ export const CrisisDocuments: React.FC = () => {
       </div>
 
       {/* Filtered Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {scenarioDocs.map((doc) => (
+      {scenarioDocs.length === 0 ? (
+        <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-zinc-400 text-xs font-mono">
+          No relevant document has been configured for this emergency plan.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {scenarioDocs.map((doc) => (
           <div
             key={doc.id}
             className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-rose-500/40 transition-all space-y-4"
@@ -102,6 +107,7 @@ export const CrisisDocuments: React.FC = () => {
           </div>
         ))}
       </div>
+      )}
 
       {/* Document Detail Preview Modal */}
       {viewingDoc && (

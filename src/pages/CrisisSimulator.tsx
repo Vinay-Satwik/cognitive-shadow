@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
-import { Sliders, ArrowRight, Sparkles, FileText, Users, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Sliders, ArrowRight, Sparkles, FileText, Users, FileSpreadsheet, CheckCircle2, Shield } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { getScenario, getRelevantDocuments, getRelevantContacts } from '../lib/crisisEngine';
+import { contextEngine } from '../services/contextEngine';
 
 export const CrisisSimulator: React.FC = () => {
-  const { plans, documents, contacts } = useApp();
+  const { plans, documents, contacts, assets, userProfile } = useApp();
   const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-auto-accident');
 
-  const scenario = getScenario(selectedPlanId);
-  const relevantDocs = getRelevantDocuments(selectedPlanId);
-  const relevantPeople = getRelevantContacts(selectedPlanId);
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
+
+  // Run the EXACT SAME central contextEngine for safe sandbox simulation
+  const contextResult = useMemo(() => {
+    return contextEngine.filter(
+      selectedPlanId,
+      documents,
+      assets,
+      contacts,
+      selectedPlan,
+      userProfile
+    );
+  }, [selectedPlanId, documents, assets, contacts, selectedPlan, userProfile]);
 
   return (
     <div className="space-y-12 max-w-5xl">
@@ -133,7 +143,7 @@ export const CrisisSimulator: React.FC = () => {
                   AFTER CONTEXT IS APPLIED
                 </span>
                 <span className="text-[11px] font-mono text-cyan-300">
-                  {scenario.emoji} {scenario.name}
+                  {selectedPlan.emoji} {selectedPlan.name}
                 </span>
               </div>
               <h3 className="text-lg font-medium text-white">
@@ -147,15 +157,19 @@ export const CrisisSimulator: React.FC = () => {
             <div className="space-y-3 pt-4 border-t border-cyan-900/40 text-xs font-mono">
               <div className="flex items-center justify-between p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-cyan-200">
                 <span>Surfaced Documents:</span>
-                <span className="text-cyan-300 text-sm font-semibold">{relevantDocs.length}</span>
+                <span className="text-cyan-300 text-sm font-semibold">{contextResult.relevantDocuments.length}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-cyan-200">
                 <span>Designated People:</span>
-                <span className="text-cyan-300 text-sm font-semibold">{relevantPeople.length}</span>
+                <span className="text-cyan-300 text-sm font-semibold">{contextResult.relevantContacts.length}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-cyan-200">
                 <span>Priority Actions:</span>
-                <span className="text-cyan-300 text-sm font-semibold">{scenario.priorityTasks.length}</span>
+                <span className="text-cyan-300 text-sm font-semibold">{contextResult.priorityTasks.length}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-cyan-200">
+                <span>Emergency Brief:</span>
+                <span className="text-cyan-300 text-xs font-medium">Ready ({contextResult.emergencyBrief.incident})</span>
               </div>
             </div>
 

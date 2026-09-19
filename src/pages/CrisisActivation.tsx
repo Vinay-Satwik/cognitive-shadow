@@ -1,14 +1,34 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Flame, X, FileText, Users, CheckSquare, FileCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { contextEngine } from '../services/contextEngine';
 
 export const CrisisActivation: React.FC = () => {
   const navigate = useNavigate();
-  const { plans, selectedPlan, selectPlan, confirmCrisisActivation, cancelActivation, documents, contacts } = useApp();
+  const {
+    plans,
+    selectedPlan,
+    selectPlan,
+    confirmCrisisActivation,
+    cancelActivation,
+    documents,
+    contacts,
+    assets,
+    userProfile
+  } = useApp();
 
-  const relevantDocs = documents.filter((d) => selectedPlan.relevantDocuments.includes(d.id));
-  const relevantPeople = contacts.filter((c) => selectedPlan.relevantContacts.includes(c.id));
+  // Dynamically compute contextual results using the central contextEngine
+  const preview = useMemo(() => {
+    return contextEngine.filter(
+      selectedPlan.id,
+      documents,
+      assets,
+      contacts,
+      selectedPlan,
+      userProfile
+    );
+  }, [selectedPlan, documents, assets, contacts, userProfile]);
 
   const handleActivate = () => {
     confirmCrisisActivation(selectedPlan.id);
@@ -65,7 +85,7 @@ export const CrisisActivation: React.FC = () => {
         })}
       </div>
 
-      {/* 3. After Selection Preview */}
+      {/* 3. Dynamic Context Engine Preview */}
       <div className="p-7 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-5">
         <span className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-medium block">
           Your Shadow will prepare:
@@ -73,28 +93,35 @@ export const CrisisActivation: React.FC = () => {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-2xl font-light text-cyan-300 block mb-1">{relevantDocs.length}</span>
+            <span className="text-2xl font-light text-cyan-300 block mb-1">
+              {preview.relevantDocuments.length}
+            </span>
             <span className="text-zinc-400">relevant documents</span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-2xl font-light text-cyan-300 block mb-1">{relevantPeople.length}</span>
+            <span className="text-2xl font-light text-cyan-300 block mb-1">
+              {preview.relevantContacts.length}
+            </span>
             <span className="text-zinc-400">emergency contacts</span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-2xl font-light text-cyan-300 block mb-1">{selectedPlan.defaultTasks.length}</span>
+            <span className="text-2xl font-light text-cyan-300 block mb-1">
+              {preview.priorityTasks.length}
+            </span>
             <span className="text-zinc-400">priority tasks</span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-2xl font-light text-cyan-300 block mb-1">1</span>
+            <span className="text-2xl font-light text-cyan-300 block mb-1">Ready</span>
             <span className="text-zinc-400">Emergency Brief</span>
           </div>
         </div>
 
         <p className="text-xs text-zinc-500 pt-1">
-          Scenario selected: <strong className="text-zinc-300">{selectedPlan.name}</strong>
+          Scenario selected: <strong className="text-zinc-300">{selectedPlan.name}</strong> •{' '}
+          {preview.relevantDocuments.length} files will surface from your vault of {documents.length} records.
         </p>
       </div>
 
@@ -102,7 +129,7 @@ export const CrisisActivation: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
         <button
           onClick={handleCancel}
-          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
         >
           Cancel and return to standby
         </button>
