@@ -1,6 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileText, Users, CheckSquare } from 'lucide-react';
+import {
+  FileSpreadsheet,
+  ArrowRight,
+  FileText,
+  Users,
+  CheckSquare,
+  Shield,
+  Sparkles
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const EmergencyPlans: React.FC = () => {
@@ -8,18 +16,38 @@ export const EmergencyPlans: React.FC = () => {
   const { plans, selectedPlan, selectPlan, startActivation, documents, contacts } = useApp();
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-light tracking-tight text-white">
-          Emergency Plans
-        </h1>
-        <p className="text-sm text-zinc-400 font-light">
-          Pre-organized scenarios that answer what information matters, who matters, and what needs to be done.
-        </p>
+    <div className="space-y-10 max-w-5xl">
+      {/* 1. Header Surface */}
+      <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-b from-[#0F1219]/90 to-[#0A0C11]/90 border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-cyan-400">
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Contingency Blueprints</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-white">
+            Emergency Plans
+          </h1>
+          <p className="text-sm text-zinc-400 font-light max-w-lg leading-relaxed">
+            Pre-organized response blueprints that answer three critical questions before panic sets in: what information matters, who matters, and what needs to be done.
+          </p>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex items-center gap-4 self-start md:self-auto shrink-0">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+              Coverage Mapping
+            </div>
+            <div className="text-lg font-medium text-white font-mono flex items-center gap-1.5">
+              <span>{plans.length} Scenarios Ready</span>
+            </div>
+            <div className="text-[11px] text-cyan-400 font-light font-mono">
+              Ready for immediate activation
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Plans List */}
+      {/* 2. Redesigned Plans List with Distinctive Three-Part Structure */}
       <div className="space-y-6">
         {plans.map((plan) => {
           const isSelected = selectedPlan.id === plan.id;
@@ -29,18 +57,20 @@ export const EmergencyPlans: React.FC = () => {
           return (
             <div
               key={plan.id}
-              className={`p-6 sm:p-8 rounded-2xl transition-all border ${
+              className={`p-7 sm:p-9 rounded-3xl transition-all duration-300 border ${
                 isSelected
-                  ? 'bg-white/[0.03] border-cyan-500/40 shadow-sm'
-                  : 'bg-white/[0.015] border-white/[0.06] hover:border-white/[0.12]'
+                  ? 'bg-[#0E121B] border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.06)]'
+                  : 'bg-[#0B0D12] border-white/[0.06] hover:border-white/[0.14]'
               }`}
             >
               {/* Plan Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{plan.emoji}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.06]">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl sm:text-4xl p-2 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                    {plan.emoji}
+                  </span>
                   <div>
-                    <h2 className="text-lg font-medium text-white">
+                    <h2 className="text-xl font-medium text-white">
                       {plan.name}
                     </h2>
                     <p className="text-xs text-zinc-400 font-light mt-0.5">
@@ -49,66 +79,68 @@ export const EmergencyPlans: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2.5 self-start sm:self-auto">
                   <button
                     onClick={() => {
                       selectPlan(plan.id);
                       startActivation(plan.id);
                       navigate('/activation');
                     }}
-                    className="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 flex items-center gap-1.5 transition-all"
+                    className="px-5 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 flex items-center gap-2 transition-all cursor-pointer group"
                   >
-                    <span>Activate</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Activate Plan</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
               </div>
 
-              {/* Three Questions: Information, People, Tasks */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/[0.06]">
+              {/* Three-Part Structure: What Information Matters, Who Matters, What Needs to be Done */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
                 {/* 1. What Information Matters? */}
-                <div className="space-y-3">
-                  <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-mono font-medium flex items-center gap-1.5">
+                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
+                  <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
                     <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>What information matters?</span>
-                  </span>
-                  <ul className="space-y-1.5 text-xs text-zinc-300 font-light">
+                    <span>WHAT INFORMATION MATTERS</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-zinc-200 font-light">
                     {planDocs.map((doc) => (
-                      <li key={doc.id} className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
-                        <span>{doc.name}</span>
+                      <li key={doc.id} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
+                        <span className="leading-snug">{doc.name}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
                 {/* 2. Who Matters? */}
-                <div className="space-y-3">
-                  <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-mono font-medium flex items-center gap-1.5">
+                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
+                  <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
                     <Users className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Who matters?</span>
-                  </span>
-                  <ul className="space-y-1.5 text-xs text-zinc-300 font-light">
+                    <span>WHO MATTERS</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-zinc-200 font-light">
                     {planPeople.map((person) => (
-                      <li key={person.id} className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
-                        <span>{person.name} ({person.relationship})</span>
+                      <li key={person.id} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
+                        <span className="leading-snug">
+                          {person.name} <span className="text-zinc-500 text-[11px] block">{person.relationship}</span>
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
                 {/* 3. What Needs to be Done? */}
-                <div className="space-y-3">
-                  <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-mono font-medium flex items-center gap-1.5">
+                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
+                  <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
                     <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>What needs to be done?</span>
-                  </span>
-                  <ul className="space-y-1.5 text-xs text-zinc-300 font-light">
+                    <span>WHAT NEEDS TO BE DONE</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-zinc-200 font-light">
                     {plan.defaultTasks.map((task) => (
                       <li key={task.id} className="flex items-start gap-2">
-                        <span className="text-zinc-500 font-mono text-[11px] mt-0.5">•</span>
-                        <span>{task.title}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
+                        <span className="leading-snug">{task.title}</span>
                       </li>
                     ))}
                   </ul>
