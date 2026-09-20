@@ -33,26 +33,26 @@ export const EmergencyContacts: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('Primary Proxy');
-  const [availability, setAvailability] = useState('Immediate 24/7');
+  const [role, setRole] = useState('');
+  const [availability, setAvailability] = useState('');
   const [primary, setPrimary] = useState(false);
   const [medicalProxy, setMedicalProxy] = useState(false);
-  const [verified, setVerified] = useState(true);
+  const [verified, setVerified] = useState(false);
 
   const primaryContact = contacts.find((c) => c.primary) || contacts[0];
 
   const openAddModal = () => {
     setEditingContactId(null);
     setName('');
-    setRelationship('Family Member');
+    setRelationship('');
     setCountryCode('+91');
     setPhone('');
-    setEmail('contact@example.com');
-    setRole('Emergency Coordinator');
-    setAvailability('Immediate 24/7');
+    setEmail('');
+    setRole('');
+    setAvailability('');
     setPrimary(false);
     setMedicalProxy(false);
-    setVerified(true);
+    setVerified(false);
     setIsFormOpen(true);
   };
 
@@ -377,7 +377,7 @@ export const EmergencyContacts: React.FC = () => {
                   <input
                     type="email"
                     required
-                    placeholder="contact@example.com"
+                    placeholder="e.g. contact@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
@@ -390,7 +390,7 @@ export const EmergencyContacts: React.FC = () => {
                   <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Role Designation</label>
                   <input
                     type="text"
-                    placeholder="Primary Proxy, Family Support, Medical Lead"
+                    placeholder="e.g. Primary Proxy, Family Support, Medical Lead"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
@@ -401,7 +401,7 @@ export const EmergencyContacts: React.FC = () => {
                   <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Availability Window</label>
                   <input
                     type="text"
-                    placeholder="Immediate 24/7, On-Call, Evenings"
+                    placeholder="e.g. Immediate 24/7, On-Call, Evenings"
                     value={availability}
                     onChange={(e) => setAvailability(e.target.value)}
                     className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
