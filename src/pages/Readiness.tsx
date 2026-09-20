@@ -127,14 +127,20 @@ export const Readiness: React.FC = () => {
 
                 <button
                   onClick={() => {
-                    if (item.toLowerCase().includes('document') || item.toLowerCase().includes('vault')) {
+                    const lower = item.toLowerCase();
+                    // Route each readiness gap to the actual screen where the user can resolve it.
+                    if (lower.includes('blood group') || lower.includes('allerg') || lower.includes('medical directives') || lower.includes('emergency directive')) {
+                      navigate('/settings');
+                    } else if (lower.includes('insurance policy') || lower.includes('insurance policies') || lower.includes('insurance')) {
                       navigate('/vault');
-                    } else if (item.toLowerCase().includes('contact') || item.toLowerCase().includes('proxy')) {
-                      navigate('/contacts');
-                    } else if (item.toLowerCase().includes('plan') || item.toLowerCase().includes('blueprint')) {
-                      navigate('/plans');
-                    } else if (item.toLowerCase().includes('asset') || item.toLowerCase().includes('insurance')) {
+                    } else if (lower.includes('property') || lower.includes('vehicle registration') || lower.includes('physical assets') || lower.includes('registered physical assets')) {
                       navigate('/assets');
+                    } else if (lower.includes('document') || lower.includes('vault')) {
+                      navigate('/vault');
+                    } else if (lower.includes('contact') || lower.includes('proxy')) {
+                      navigate('/contacts');
+                    } else if (lower.includes('plan') || lower.includes('blueprint')) {
+                      navigate('/plans');
                     } else {
                       navigate('/settings');
                     }
