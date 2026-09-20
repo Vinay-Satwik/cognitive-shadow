@@ -35,6 +35,7 @@ export const Settings: React.FC = () => {
   const [bloodGroup, setBloodGroup] = useState(userProfile?.bloodGroup || '');
   const [allergies, setAllergies] = useState(userProfile?.allergies || '');
   const [medicalNotes, setMedicalNotes] = useState(userProfile?.medicalNotes || '');
+  const [validationError, setValidationError] = useState('');
 
   // Keep fields synchronized if userProfile changes
   React.useEffect(() => {
@@ -67,7 +68,25 @@ export const Settings: React.FC = () => {
   const [exported, setExported] = useState(false);
 
   const handleSave = () => {
-    updateProfile({ name, email });
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const validName = /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(trimmedName);
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    const validBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    if (!validName) {
+      setValidationError('Enter a valid name using letters, spaces, apostrophes, periods, or hyphens.');
+      return;
+    }
+    if (!validEmail) {
+      setValidationError('Enter a valid email address.');
+      return;
+    }
+    if (bloodGroup && !validBloodGroups.includes(bloodGroup)) {
+      setValidationError('Select a valid blood group.');
+      return;
+    }
+    setValidationError('');
+    updateProfile({ name: trimmedName, email: trimmedEmail });
     updateUserProfile({
       name,
       email,
@@ -155,13 +174,20 @@ export const Settings: React.FC = () => {
             <span>1. Profile & Emergency Markers</span>
           </div>
 
+          {validationError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-mono">
+              {validationError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             <div>
               <label className="text-zinc-500 block text-[11px] uppercase mb-1.5">Designated Primary Name</label>
               <input
                 type="text"
+                required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); setValidationError(''); }}
                 className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -169,19 +195,25 @@ export const Settings: React.FC = () => {
               <label className="text-zinc-500 block text-[11px] uppercase mb-1.5">Account Email</label>
               <input
                 type="email"
+                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setValidationError(''); }}
                 className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
             <div>
               <label className="text-zinc-500 block text-[11px] uppercase mb-1.5">Emergency Blood Marker</label>
-              <input
-                type="text"
+              <select
                 value={bloodGroup}
-                onChange={(e) => setBloodGroup(e.target.value)}
+                onChange={(e) => { setBloodGroup(e.target.value); setValidationError(''); }}
                 className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-              />
+              >
+                <option value="">Select blood group</option>
+                <option value="A+">A+</option><option value="A-">A-</option>
+                <option value="B+">B+</option><option value="B-">B-</option>
+                <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                <option value="O+">O+</option><option value="O-">O-</option>
+              </select>
             </div>
             <div>
               <label className="text-zinc-500 block text-[11px] uppercase mb-1.5">Critical Allergies / Contraindications</label>
