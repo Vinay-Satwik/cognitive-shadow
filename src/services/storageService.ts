@@ -135,7 +135,11 @@ export const getDefaultStoreData = (userId = 'usr-alex-morgan', initialProfile?:
     temporaryAccessRecords: [],
     mode: 'dormant',
     selectedPlanId: 'plan-auto-accident'
-  };* Cognitive Shadow Central Storage Service
+  };
+};
+
+/**
+ * Cognitive Shadow Central Storage Service
  * 
  * Versioned local persistence layer with strict user data isolation.
  * Every record is associated with the authenticated user's userId.
