@@ -83,7 +83,7 @@ export const Dashboard: React.FC = () => {
             </h1>
 
             <p className="text-base sm:text-lg text-zinc-400 font-light max-w-xl leading-relaxed">
-              Your Shadow is standing by. All documents, verified proxies, and contingency playbooks are synchronized.
+              Your Shadow is standing by. Your important information is organized, accessible, and ready when you need it.
             </p>
           </div>
 
