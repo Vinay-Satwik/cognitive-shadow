@@ -28,6 +28,7 @@ export const EmergencyPlans: React.FC = () => {
   const [formName, setFormName] = useState('');
   const [formEmoji, setFormEmoji] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formScenario, setFormScenario] = useState('');
   const [formDocIds, setFormDocIds] = useState<string[]>([]);
   const [formContactIds, setFormContactIds] = useState<string[]>([]);
   const [formTasks, setFormTasks] = useState<PlanTask[]>([]);
@@ -86,6 +87,7 @@ export const EmergencyPlans: React.FC = () => {
     setFormName('');
     setFormEmoji('📋');
     setFormDescription('');
+    setFormScenario('');
     setFormDocIds([]);
     setFormContactIds([]);
     setFormAssetIds([]);
@@ -101,6 +103,7 @@ export const EmergencyPlans: React.FC = () => {
       name: formName.trim(),
       emoji: formEmoji.trim() || '📋',
       description: formDescription.trim(),
+      scenario: formScenario || undefined,
       relevantDocuments: formDocIds,
       relevantAssets: formAssetIds,
       relevantContacts: formContactIds,
@@ -238,20 +241,122 @@ export const EmergencyPlans: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-2xl bg-[#0C0E14] border border-white/[0.1] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-              <div><h3 className="text-lg font-medium text-white">Configure Personal Emergency Plan</h3><p className="text-xs font-mono text-zinc-400 mt-1">Choose what information should surface for a specific situation.</p></div>
-              <button onClick={() => setIsCreatingPlan(false)} className="p-1.5 text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
-            </div>
-            <form onSubmit={handleCreatePlan} className="space-y-5 text-xs font-mono">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <input value={formEmoji} onChange={e=>setFormEmoji(e.target.value)} className="bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-center text-lg" aria-label="Plan emoji" />
-                <input required value={formName} onChange={e=>setFormName(e.target.value)} placeholder="Plan name *" className="sm:col-span-3 bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-zinc-200" />
+              <div>
+                <h3 className="text-lg font-medium text-white">Configure Personal Emergency Plan</h3>
+                <p className="text-xs font-mono text-zinc-400 mt-1">Choose the situation, information, people, assets and actions this plan should surface.</p>
               </div>
-              <textarea value={formDescription} onChange={e=>setFormDescription(e.target.value)} placeholder="Describe the situation and response plan" rows={2} className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200" />
-              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Documents</label><div className="max-h-32 overflow-y-auto space-y-1">{documents.map(doc=><label key={doc.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formDocIds.includes(doc.id)} onChange={()=>toggleDocSelection(doc.id)} />{doc.name}</label>)}</div></div>
-              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Contacts</label><div className="max-h-32 overflow-y-auto space-y-1">{contacts.map(contact=><label key={contact.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formContactIds.includes(contact.id)} onChange={()=>toggleContactSelection(contact.id)} />{contact.name} ({contact.relationship})</label>)}</div></div>
-              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Assets</label><div className="max-h-32 overflow-y-auto space-y-1">{assets.map(asset=><label key={asset.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formAssetIds.includes(asset.id)} onChange={()=>setFormAssetIds(prev=>prev.includes(asset.id)?prev.filter(id=>id!==asset.id):[...prev,asset.id])} />{asset.name}</label>)}</div></div>
-              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Priority Tasks</label><div className="space-y-2">{formTasks.map(task=><div key={task.id} className="flex justify-between p-2 bg-white/[0.02] rounded-lg text-zinc-300"><span>{task.title}</span><button type="button" onClick={()=>handleRemoveTask(task.id)}><Trash2 className="w-3.5 h-3.5 text-zinc-500" /></button></div>)}</div><div className="flex gap-2 mt-2"><input value={newTaskTitle} onChange={e=>setNewTaskTitle(e.target.value)} placeholder="Priority task" className="flex-1 bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2" /><button type="button" onClick={handleAddTask} className="px-3 rounded-xl border border-cyan-500/30 text-cyan-300"><Plus className="w-3.5 h-3.5" /></button></div></div>
-              <div className="flex justify-end gap-3 pt-3 border-t border-white/[0.06]"><button type="button" onClick={()=>setIsCreatingPlan(false)} className="px-4 py-2 text-zinc-400">Cancel</button><button type="submit" className="px-5 py-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Create Personal Plan</button></div>
+              <button type="button" onClick={() => setIsCreatingPlan(false)} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.05]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePlan} className="space-y-6 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Emoji</label>
+                  <input value={formEmoji} onChange={e => setFormEmoji(e.target.value)} className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-center text-lg text-zinc-200" aria-label="Plan emoji" />
+                </div>
+                <div className="sm:col-span-3">
+                  <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Plan Name *</label>
+                  <input required value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Family Medical Response" className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Crisis Scenario</label>
+                <select value={formScenario} onChange={e => setFormScenario(e.target.value)} className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200">
+                  <option value="">Custom / General Emergency</option>
+                  <option value="plan-auto-accident">Major Automobile Accident</option>
+                  <option value="plan-medical-emergency">Critical Medical Emergency</option>
+                  <option value="plan-home-emergency">Home / Property Emergency</option>
+                  <option value="plan-travel-emergency">Travel Emergency</option>
+                  <option value="plan-identity-loss">Identity / Document Loss</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Description</label>
+                <textarea value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Describe when this plan should be used and what it prepares." rows={2} className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-zinc-200" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-cyan-400 block uppercase text-[10px] tracking-wider font-semibold">1. Relevant Documents ({formDocIds.length} selected)</label>
+                {documents.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-zinc-500 italic">No documents available yet. Add documents in My Documents and they will appear here.</div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-[#08090C] border border-white/[0.06] max-h-40 overflow-y-auto space-y-1.5">
+                    {documents.map(doc => (
+                      <label key={doc.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] cursor-pointer text-zinc-300">
+                        <input type="checkbox" checked={formDocIds.includes(doc.id)} onChange={() => toggleDocSelection(doc.id)} />
+                        <span>{doc.name}</span><span className="text-[10px] text-zinc-500 ml-auto">{doc.category}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-cyan-400 block uppercase text-[10px] tracking-wider font-semibold">2. Relevant Contacts ({formContactIds.length} selected)</label>
+                {contacts.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-zinc-500 italic">No emergency contacts available yet. Add contacts in Emergency Contacts and they will appear here.</div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-[#08090C] border border-white/[0.06] max-h-40 overflow-y-auto space-y-1.5">
+                    {contacts.map(contact => (
+                      <label key={contact.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] cursor-pointer text-zinc-300">
+                        <input type="checkbox" checked={formContactIds.includes(contact.id)} onChange={() => toggleContactSelection(contact.id)} />
+                        <span>{contact.name} ({contact.relationship})</span><span className="text-[10px] text-zinc-500 ml-auto">{contact.role}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-cyan-400 block uppercase text-[10px] tracking-wider font-semibold">3. Relevant Assets ({formAssetIds.length} selected)</label>
+                {assets.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-zinc-500 italic">No assets available yet. Add assets in My Assets and they will appear here.</div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-[#08090C] border border-white/[0.06] max-h-40 overflow-y-auto space-y-1.5">
+                    {assets.map(asset => (
+                      <label key={asset.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.03] cursor-pointer text-zinc-300">
+                        <input type="checkbox" checked={formAssetIds.includes(asset.id)} onChange={() => setFormAssetIds(prev => prev.includes(asset.id) ? prev.filter(id => id !== asset.id) : [...prev, asset.id])} />
+                        <span>{asset.name}</span><span className="text-[10px] text-zinc-500 ml-auto">{asset.type}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-cyan-400 block uppercase text-[10px] tracking-wider font-semibold">4. Priority Tasks ({formTasks.length} configured)</label>
+                {formTasks.length > 0 && (
+                  <div className="space-y-2">
+                    {formTasks.map(task => (
+                      <div key={task.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#08090C] border border-white/[0.06]">
+                        <div><span className="text-white block">{task.title}</span><span className="text-[10px] text-cyan-400">Assignee: {task.defaultAssigneeRole || 'Primary Proxy'} • {task.priority}</span></div>
+                        <button type="button" onClick={() => handleRemoveTask(task.id)}><Trash2 className="w-3.5 h-3.5 text-zinc-500 hover:text-rose-400" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04] space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Task action *" className="sm:col-span-2 bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200" />
+                    <input value={newTaskRole} onChange={e => setNewTaskRole(e.target.value)} placeholder="Assignee role" className="bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200" />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <select value={newTaskPriority} onChange={e => setNewTaskPriority(e.target.value as 'Critical' | 'High' | 'Medium' | 'Low')} className="bg-[#08090C] border border-white/[0.08] rounded-lg px-2.5 py-2 text-[11px] text-zinc-300">
+                      <option value="Critical">Critical Priority</option><option value="High">High Priority</option><option value="Medium">Medium Priority</option><option value="Low">Low Priority</option>
+                    </select>
+                    <button type="button" onClick={handleAddTask} disabled={!newTaskTitle.trim()} className="px-3.5 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 disabled:opacity-40 text-cyan-300 text-xs border border-cyan-500/30 flex items-center gap-1.5"><Plus className="w-3 h-3" />Add Task</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
+                <button type="button" onClick={() => setIsCreatingPlan(false)} className="px-4 py-2.5 rounded-xl text-xs font-mono text-zinc-400 hover:text-white">Cancel</button>
+                <button type="submit" className="px-6 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-semibold text-xs font-mono border border-cyan-500/40 flex items-center gap-2"><Save className="w-3.5 h-3.5" />Create Personal Plan</button>
+              </div>
             </form>
           </div>
         </div>
