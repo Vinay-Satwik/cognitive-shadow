@@ -251,7 +251,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Needs Attention: Actionable Pre-Crisis Items */}
+      {/* 4. Needs Attention: Driven by live user data */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -260,60 +260,43 @@ export const Dashboard: React.FC = () => {
             </span>
             <h2 className="text-lg font-medium text-white">Needs Attention</h2>
           </div>
-          <span className="text-xs font-mono text-amber-400/90 bg-amber-950/20 px-2.5 py-1 rounded-full border border-amber-800/30">
-            3 items pending
+          <span className="text-xs font-mono text-zinc-400 bg-white/[0.03] px-2.5 py-1 rounded-full border border-white/[0.07]">
+            {readiness.improvements.length} items pending
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div 
-            onClick={() => navigate('/vault')}
-            className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-amber-500/40 hover:bg-white/[0.03] cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Vehicle Insurance</span>
+        {readiness.improvements.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {readiness.improvements.map((item, index) => (
+              <div
+                key={index}
+                onClick={() => navigate('/readiness')}
+                className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-cyan-500/30 hover:bg-white/[0.03] cursor-pointer transition-all space-y-2 group"
+              >
+                <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>READINESS ACTION</span>
+                </div>
+                <div className="text-sm font-medium text-zinc-200 group-hover:text-white">
+                  {item}
+                </div>
+                <p className="text-xs text-zinc-500 font-light">
+                  Review your Readiness panel for the records or preparation steps relevant to this item.
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono mb-2">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>ALL CLEAR</span>
             </div>
-            <div className="text-sm font-medium text-zinc-200 group-hover:text-white">
-              Renewal approaching in October
-            </div>
-            <p className="text-xs text-zinc-500 font-light">
-              National Insurance policy #488102 valid for 30 days. Review active schedule.
+            <p className="text-sm text-zinc-300 font-light">
+              No pending safeguards. Your current information is up to date.
             </p>
           </div>
-
-          <div 
-            onClick={() => navigate('/contacts')}
-            className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-amber-500/40 hover:bg-white/[0.03] cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Emergency Contact</span>
-            </div>
-            <div className="text-sm font-medium text-zinc-200 group-hover:text-white">
-              Maya Vance verification pending
-            </div>
-            <p className="text-xs text-zinc-500 font-light">
-              Local alternate contact has not yet confirmed the emergency verification token.
-            </p>
-          </div>
-
-          <div 
-            onClick={() => navigate('/plans')}
-            className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-amber-500/40 hover:bg-white/[0.03] cursor-pointer transition-all space-y-2 group"
-          >
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-mono">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Plan Blueprint</span>
-            </div>
-            <div className="text-sm font-medium text-zinc-200 group-hover:text-white">
-              Travel emergency review overdue
-            </div>
-            <p className="text-xs text-zinc-500 font-light">
-              Overseas itinerary and passport details last audited 3 months ago.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 5. Your Emergency Plans: Redesigned Scenario Cards */}
