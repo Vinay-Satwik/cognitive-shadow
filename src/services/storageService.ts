@@ -157,12 +157,26 @@ export const storageService = {
       if (raw) {
         const parsed = JSON.parse(raw) as AppStoreData;
         if (parsed.documents && parsed.assets && parsed.contacts && parsed.plans && parsed.userProfile) {
+          // Filter out legacy fake documents created with empty file paths
+          parsed.documents = (parsed.documents || []).filter(
+            (d) => !(d.name === 'Health Insurance Card & Advance Directive' && (!d.filePath || d.filePath === '' || d.filePath === 'none'))
+          );
+
           // Ensure every record is tagged with the current userId
           parsed.userProfile.userId = effectiveUserId;
           parsed.documents = parsed.documents.map((d) => ({ ...d, userId: d.userId || effectiveUserId }));
           parsed.assets = parsed.assets.map((a) => ({ ...a, userId: a.userId || effectiveUserId }));
           parsed.contacts = parsed.contacts.map((c) => ({ ...c, userId: c.userId || effectiveUserId }));
-          parsed.plans = parsed.plans.map((p) => ({ ...p, userId: p.userId || effectiveUserId }));
+          parsed.plans = parsed.plans.map((p) => ({
+            ...p,
+            userId: p.userId || effectiveUserId,
+            defaultTasks: p.defaultTasks?.map((t) => {
+              let role = t.defaultAssigneeRole;
+              if (role === 'Rahul' || role === 'Priya' || role === 'Maya') role = 'Primary Proxy';
+              if (role === 'Dr. Mehta') role = 'Medical Proxy';
+              return { ...t, defaultAssigneeRole: role };
+            })
+          }));
           if (parsed.crisisSession) parsed.crisisSession.userId = effectiveUserId;
           return parsed;
         }

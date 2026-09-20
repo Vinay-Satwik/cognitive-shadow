@@ -45,59 +45,109 @@ interface OnboardingDoc {
   category: DocumentCategory;
   expiryDate: string;
   emergencyRelevance: 'Critical' | 'High' | 'Moderate' | 'Low';
+  file?: File;
 }
 
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
-  const { plans, selectPlan, setContacts, setAssets, setDocuments, updateUserProfile } = useApp();
+  const { plans, selectPlan, setContacts, setAssets, setDocuments, updateUserProfile, userProfile, contacts, assets, documents } = useApp();
 
   const isDemo = user?.id === 'usr-alex-morgan';
+  const isRerun = new URLSearchParams(window.location.search).get('mode') === 'rerun' || !!user?.hasCompletedOnboarding;
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
 
-  // Step 1: Personal Profile
-  const [name, setName] = useState(user?.name || (isDemo ? 'Alex Morgan' : ''));
-  const [bloodGroup, setBloodGroup] = useState(isDemo ? 'O+ (Universal Donor)' : 'O+');
-  const [allergies, setAllergies] = useState(isDemo ? 'Penicillin, Cephalosporins' : 'None declared');
-  const [location, setLocation] = useState(isDemo ? 'San Francisco, CA' : '');
-  const [medicalNotes, setMedicalNotes] = useState(isDemo ? 'Asthma inhaler in travel kit.' : '');
+  // Step 1: Personal Profile (Prefill from existing data if available)
+  const [name, setName] = useState(userProfile?.name || user?.name || (isDemo ? 'Alex Morgan' : ''));
+  const [bloodGroup, setBloodGroup] = useState(userProfile?.bloodGroup || (isDemo ? 'O+ (Universal Donor)' : 'O+'));
+  const [allergies, setAllergies] = useState(userProfile?.allergies || (isDemo ? 'Penicillin, Cephalosporins' : 'None declared'));
+  const [location, setLocation] = useState(userProfile?.primaryLocation || (isDemo ? 'San Francisco, CA' : ''));
+  const [medicalNotes, setMedicalNotes] = useState(userProfile?.medicalNotes || (isDemo ? 'Asthma inhaler in travel kit.' : ''));
 
-  // Step 2: Emergency Contacts (Multi-Record Support)
-  const [contactsList, setContactsList] = useState<OnboardingContact[]>([
-    {
-      id: 'con-1',
-      name: isDemo ? 'Rahul Morgan' : '',
-      relationship: isDemo ? 'Brother / Medical Proxy' : 'Primary Proxy / Family',
-      phone: isDemo ? '+1 (555) 382-9901' : '',
-      email: isDemo ? 'rahul.morgan@example.com' : '',
-      role: 'Primary Incident Coordinator & Proxy',
-      primary: true,
-      medicalProxy: true
+  // Step 2: Emergency Contacts (Multi-Record Support, prefill from existing contacts)
+  const [contactsList, setContactsList] = useState<OnboardingContact[]>(() => {
+    if (contacts && contacts.length > 0) {
+      return contacts.map((c) => ({
+        id: c.id,
+        name: c.name,
+        relationship: c.relationship,
+        phone: c.phone,
+        email: c.email,
+        role: c.role,
+        primary: c.primary,
+        medicalProxy: c.medicalProxy
+      }));
     }
-  ]);
+    return [
+      {
+        id: 'con-1',
+        name: isDemo ? 'Rahul Morgan' : '',
+        relationship: isDemo ? 'Brother / Medical Proxy' : 'Primary Proxy / Family',
+        phone: isDemo ? '+1 (555) 382-9901' : '',
+        email: isDemo ? 'rahul.morgan@example.com' : '',
+        role: 'Primary Incident Coordinator & Proxy',
+        primary: true,
+        medicalProxy: true
+      }
+    ];
+  });
 
-  // Step 3: Critical Assets (Multi-Record Support)
-  const [assetsList, setAssetsList] = useState<OnboardingAsset[]>([
-    {
-      id: 'ast-1',
-      name: isDemo ? 'Honda City' : '',
-      type: 'Vehicle',
-      registrationOrSerial: isDemo ? 'CA-7XYZ890' : '',
-      insurance: isDemo ? 'National Auto Insurance #POL-882901' : ''
+  // Step 3: Critical Assets (Multi-Record Support, prefill from existing assets)
+  const [assetsList, setAssetsList] = useState<OnboardingAsset[]>(() => {
+    if (assets && assets.length > 0) {
+      return assets.map((a) => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        registrationOrSerial: a.registrationOrSerial,
+        insurance: a.insurance
+      }));
     }
-  ]);
+    return [
+      {
+        id: 'ast-1',
+        name: isDemo ? 'Honda City' : '',
+        type: 'Vehicle',
+        registrationOrSerial: isDemo ? 'CA-7XYZ890' : '',
+        insurance: isDemo ? 'National Auto Insurance #POL-882901' : ''
+      }
+    ];
+  });
 
-  // Step 4: Shadow Vault Documents (Multi-Record Support)
-  const [docsList, setDocsList] = useState<OnboardingDoc[]>([
-    {
-      id: 'doc-1',
-      name: isDemo ? 'Vehicle Insurance Policy' : 'Health Insurance Card & Advance Directive',
-      category: 'Insurance',
-      expiryDate: '2027-12-31',
-      emergencyRelevance: 'Critical'
+  // Step 4: Shadow Vault Documents (Must start EMPTY for real users)
+  const [docsList, setDocsList] = useState<OnboardingDoc[]>(() => {
+    if (documents && documents.length > 0) {
+      // Filter out any legacy empty-file fake document
+      const realDocs = documents.filter(
+        (d) => !(d.name === 'Health Insurance Card & Advance Directive' && (!d.filePath || d.filePath === ''))
+      );
+      if (realDocs.length > 0) {
+        return realDocs.map((d) => ({
+          id: d.id,
+          name: d.name,
+          category: d.category,
+          expiryDate: d.expiryDate || '',
+          emergencyRelevance: d.emergencyRelevance
+        }));
+      }
     }
-  ]);
+    if (isDemo) {
+      return [
+        {
+          id: 'doc-1',
+          name: 'Vehicle Insurance Policy',
+          category: 'Insurance',
+          expiryDate: '2027-12-31',
+          emergencyRelevance: 'Critical'
+        }
+      ];
+    }
+    // EMPTY array: zero auto-created documents for real users
+    return [];
+  });
 
   // Step 5: Primary Plan
   const [selectedPlanId, setSelectedPlanId] = useState('plan-auto-accident');
@@ -187,7 +237,6 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleRemoveDoc = (id: string) => {
-    if (docsList.length <= 1) return;
     setDocsList((prev) => prev.filter((d) => d.id !== id));
   };
 
@@ -205,8 +254,46 @@ export const Onboarding: React.FC = () => {
     }
   };
 
+  const handleSkip = async () => {
+    if (isSkipping) return;
+    console.log('[Onboarding] Skip to Dashboard clicked');
+    setIsSkipping(true);
+    setSkipError(null);
+
+    try {
+      if (!user?.id) {
+        throw new Error('No authenticated user session found.');
+      }
+
+      // 1. Update the current user's profile: has_completed_onboarding = true
+      // Calls Supabase Auth/profiles and updates AuthContext.user in React state
+      await updateProfile({
+        hasCompletedOnboarding: true
+      });
+
+      // 2. Synchronize local AppContext userProfile state without injecting demo/fake records
+      updateUserProfile({
+        hasCompletedOnboarding: true
+      });
+
+      console.log('[Onboarding] Skip successful: profile.has_completed_onboarding set to true');
+
+      // 3. Navigate to dashboard
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error('[Onboarding] Skip failed:', {
+        message: err?.message || 'Unknown error',
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint
+      });
+      setSkipError(err?.message ? `Unable to skip onboarding: ${err.message}` : 'Unable to skip onboarding. Please try again.');
+      setIsSkipping(false);
+    }
+  };
+
   const handleComplete = async () => {
-    const effectiveUserId = user?.id || 'usr-alex-morgan';
+    const effectiveUserId = user?.id || '';
     const profileName = name.trim() || user?.name || 'Registered User';
     const directive = `In the event of medical incapacitation, notify ${contactsList[0]?.name || 'designated emergency proxy'} immediately.`;
 
@@ -239,9 +326,7 @@ export const Onboarding: React.FC = () => {
         medicalProxy: c.medicalProxy
       }));
 
-    if (validContacts.length > 0) {
-      setContacts(validContacts);
-    }
+    setContacts(validContacts);
 
     // 3. Save Assets (Filter out blank names)
     const validAssets: Asset[] = assetsList
@@ -259,29 +344,10 @@ export const Onboarding: React.FC = () => {
         relatedDocuments: []
       }));
 
-    if (validAssets.length > 0) {
-      setAssets(validAssets);
-    }
+    setAssets(validAssets);
 
     // 4. Save Documents (Filter out blank names)
-    const validDocs: Document[] = docsList
-      .filter((d) => d.name.trim().length > 0)
-      .map((d, idx) => ({
-        id: `doc-${Date.now()}-${idx + 1}`,
-        userId: effectiveUserId,
-        name: d.name.trim(),
-        category: d.category,
-        description: 'Verified emergency record uploaded during onboarding protocol.',
-        expiryDate: d.expiryDate,
-        emergencyRelevance: d.emergencyRelevance,
-        accessLevel: 'Important',
-        uploadDate: 'Today',
-        fileSize: '1.2 MB'
-      }));
-
-    if (validDocs.length > 0) {
-      setDocuments(validDocs);
-    }
+    const validDocs = docsList.filter((d) => d.name.trim().length > 0);
 
     // 5. Select active emergency plan
     selectPlan(selectedPlanId);
@@ -289,8 +355,10 @@ export const Onboarding: React.FC = () => {
     // 6. Synchronize with Supabase if configured
     if (isSupabaseConfigured && supabase && user?.id) {
       try {
+        // Prevent duplicate contacts on re-run: delete previous records for user
+        await supabase.from('emergency_contacts').delete().eq('user_id', user.id);
         if (validContacts.length > 0) {
-          await supabase.from('emergency_contacts').insert(
+          const { error: contactsErr } = await supabase.from('emergency_contacts').insert(
             validContacts.map((c) => ({
               user_id: user.id,
               full_name: c.name,
@@ -304,10 +372,19 @@ export const Onboarding: React.FC = () => {
               verified: c.verified
             }))
           );
+          if (contactsErr) {
+            console.error('[Onboarding] Supabase insert emergency_contacts failed:', {
+              message: contactsErr.message,
+              code: contactsErr.code,
+              details: contactsErr.details
+            });
+          }
         }
 
+        // Prevent duplicate assets on re-run: delete previous records for user
+        await supabase.from('assets').delete().eq('user_id', user.id);
         if (validAssets.length > 0) {
-          await supabase.from('assets').insert(
+          const { error: assetsErr } = await supabase.from('assets').insert(
             validAssets.map((a) => ({
               user_id: user.id,
               name: a.name,
@@ -318,23 +395,95 @@ export const Onboarding: React.FC = () => {
               warranty_status: a.warranty
             }))
           );
+          if (assetsErr) {
+            console.error('[Onboarding] Supabase insert assets failed:', {
+              message: assetsErr.message,
+              code: assetsErr.code,
+              details: assetsErr.details
+            });
+          }
         }
 
+        // Upload any document files and sync documents
+        const processedDocs: Document[] = [];
         if (validDocs.length > 0) {
-          await supabase.from('documents').insert(
-            validDocs.map((d) => ({
-              user_id: user.id,
-              name: d.name,
+          for (let idx = 0; idx < validDocs.length; idx++) {
+            const d = validDocs[idx];
+            let filePath = '';
+            let fileSize = '1.2 MB';
+            let fileType = 'PDF';
+
+            if (d.file) {
+              const fileExt = d.file.name.split('.').pop() || 'pdf';
+              const storagePath = `${user.id}/doc-${Date.now()}-${idx}.${fileExt}`;
+              const { error: upErr } = await supabase.storage
+                .from('documents')
+                .upload(storagePath, d.file, { cacheControl: '3600', upsert: false });
+              if (!upErr) {
+                filePath = storagePath;
+                fileSize = `${(d.file.size / (1024 * 1024)).toFixed(1)} MB`;
+                fileType = d.file.type.includes('pdf') ? 'PDF' : d.file.type.includes('png') ? 'PNG' : 'JPEG';
+              } else {
+                console.warn('[Onboarding] File upload failed:', upErr.message);
+              }
+            }
+
+            const docRow: Document = {
+              id: `doc-${Date.now()}-${idx + 1}`,
+              userId: effectiveUserId,
+              name: d.name.trim(),
               category: d.category,
-              description: d.description,
-              expiry_date: d.expiryDate,
-              emergency_access_level: d.emergencyRelevance === 'Critical' ? 'Critical' : 'Important'
-            }))
-          );
+              description: 'Verified emergency record uploaded during onboarding protocol.',
+              expiryDate: d.expiryDate || undefined,
+              emergencyRelevance: d.emergencyRelevance,
+              accessLevel: 'Important',
+              uploadDate: 'Today',
+              filePath: filePath || undefined,
+              fileSize,
+              fileType
+            };
+            processedDocs.push(docRow);
+
+            const { error: docsErr } = await supabase.from('documents').insert({
+              user_id: user.id,
+              name: docRow.name,
+              category: docRow.category,
+              description: docRow.description,
+              expiry_date: docRow.expiryDate,
+              emergency_access_level: docRow.emergencyRelevance === 'Critical' ? 'Critical' : 'Important',
+              file_path: filePath,
+              file_size: fileSize,
+              file_type: fileType
+            });
+            if (docsErr) {
+              console.error('[Onboarding] Supabase insert documents failed:', {
+                message: docsErr.message,
+                code: docsErr.code,
+                details: docsErr.details
+              });
+            }
+          }
         }
-      } catch (cloudErr) {
+        setDocuments(processedDocs);
+      } catch (cloudErr: any) {
         console.warn('[Onboarding] Cloud synchronization note:', cloudErr);
       }
+    } else {
+      // Local-only / offline path
+      const localDocs: Document[] = validDocs.map((d, idx) => ({
+        id: `doc-${Date.now()}-${idx + 1}`,
+        userId: effectiveUserId,
+        name: d.name.trim(),
+        category: d.category,
+        description: 'Verified emergency record uploaded during onboarding protocol.',
+        expiryDate: d.expiryDate,
+        emergencyRelevance: d.emergencyRelevance,
+        accessLevel: 'Important',
+        uploadDate: 'Today',
+        fileSize: '1.2 MB',
+        fileType: 'PDF'
+      }));
+      setDocuments(localDocs);
     }
 
     // 7. Update Auth session state with completed onboarding
@@ -348,11 +497,16 @@ export const Onboarding: React.FC = () => {
         emergencyDirective: directive,
         hasCompletedOnboarding: true
       });
-    } catch (profErr) {
-      console.warn('[Onboarding] Profile completion notice:', profErr);
+      navigate('/dashboard');
+    } catch (profErr: any) {
+      console.error('[Onboarding] Profile completion failed:', {
+        message: profErr?.message || 'Unknown error',
+        code: profErr?.code,
+        details: profErr?.details,
+        hint: profErr?.hint
+      });
+      setSkipError(profErr?.message ? `Unable to complete onboarding: ${profErr.message}` : 'Unable to complete onboarding. Please try again.');
     }
-
-    navigate('/dashboard');
   };
 
   return (
@@ -370,16 +524,40 @@ export const Onboarding: React.FC = () => {
           </span>
         </div>
 
-        <button
-          onClick={handleComplete}
-          className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-        >
-          Skip to Dashboard
-        </button>
+        <div className="flex items-center gap-3">
+          {user?.hasCompletedOnboarding ? (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Dashboard</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleSkip}
+              disabled={isSkipping}
+              className="text-xs font-mono text-zinc-500 hover:text-zinc-300 disabled:text-cyan-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isSkipping ? 'Opening Dashboard...' : 'Skip to Dashboard'}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col justify-center max-w-3xl w-full mx-auto px-6 py-10">
+        {skipError && (
+          <div className="mb-6 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 flex items-center justify-between text-xs text-rose-300 font-mono">
+            <span>{skipError}</span>
+            <button
+              onClick={() => setSkipError(null)}
+              className="text-rose-400 hover:text-rose-200 ml-3"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {/* Progress Bar & Indicators */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3 text-xs font-mono">
@@ -716,21 +894,39 @@ export const Onboarding: React.FC = () => {
                   className="px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer self-start"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add another document</span>
+                  <span>+ Add Document</span>
                 </button>
               </div>
 
-              <div className="space-y-4">
-                {docsList.map((doc, idx) => (
-                  <div
-                    key={doc.id}
-                    className="p-5 rounded-2xl bg-[#08090C] border border-white/[0.06] space-y-4 relative"
+              {docsList.length === 0 ? (
+                <div className="p-8 sm:p-12 text-center rounded-2xl bg-[#08090C] border border-white/[0.06] space-y-3">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-950/40 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mx-auto">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-medium text-white">No documents added yet</h3>
+                  <p className="text-xs text-zinc-400 font-light max-w-md mx-auto leading-relaxed">
+                    Add critical documents to make them instantly available during emergencies, or proceed and upload documents anytime from your Shadow Vault.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAddDoc}
+                    className="mt-2 px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-mono inline-flex items-center gap-2 cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-cyan-400 uppercase tracking-wider text-[11px] font-medium">
-                        {idx === 0 ? 'Essential Document' : `Additional Document #${idx + 1}`}
-                      </span>
-                      {docsList.length > 1 && (
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Document</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {docsList.map((doc, idx) => (
+                    <div
+                      key={doc.id}
+                      className="p-5 rounded-2xl bg-[#08090C] border border-white/[0.06] space-y-4 relative"
+                    >
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-cyan-400 uppercase tracking-wider text-[11px] font-medium">
+                          {idx === 0 ? 'Document #1' : `Additional Document #${idx + 1}`}
+                        </span>
                         <button
                           type="button"
                           onClick={() => handleRemoveDoc(doc.id)}
@@ -739,63 +935,90 @@ export const Onboarding: React.FC = () => {
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+                        <div className="sm:col-span-2">
+                          <label className="text-zinc-400 block mb-1 text-[11px]">Document Name</label>
+                          <input
+                            type="text"
+                            value={doc.name}
+                            onChange={(e) => handleUpdateDoc(doc.id, { name: e.target.value })}
+                            placeholder="e.g. Passport or Insurance Card"
+                            className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-zinc-400 block mb-1 text-[11px]">Category</label>
+                          <select
+                            value={doc.category}
+                            onChange={(e) => handleUpdateDoc(doc.id, { category: e.target.value as DocumentCategory })}
+                            className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                          >
+                            <option value="Identity">Identity</option>
+                            <option value="Medical">Medical</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="Vehicle">Vehicle</option>
+                            <option value="Property">Property</option>
+                            <option value="Legal">Legal</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-zinc-400 block mb-1 text-[11px]">Expiry Date</label>
+                          <input
+                            type="date"
+                            value={doc.expiryDate}
+                            onChange={(e) => handleUpdateDoc(doc.id, { expiryDate: e.target.value })}
+                            className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="text-zinc-400 block mb-1 text-[11px]">Emergency Priority</label>
+                          <select
+                            value={doc.emergencyRelevance}
+                            onChange={(e) => handleUpdateDoc(doc.id, { emergencyRelevance: e.target.value as any })}
+                            className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                          >
+                            <option value="Critical">Critical (Immediate Display)</option>
+                            <option value="High">High Priority</option>
+                            <option value="Moderate">Moderate Priority</option>
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-3 pt-2 border-t border-white/[0.04]">
+                          <label className="text-zinc-400 block mb-1 text-[11px]">Attach File (Optional: .PDF, .PNG, .JPG, Max 2MB)</label>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 2 * 1024 * 1024) {
+                                  alert('File is too large. Maximum allowed size is 2 MB.');
+                                  return;
+                                }
+                                handleUpdateDoc(doc.id, {
+                                  file,
+                                  name: doc.name || file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ')
+                                });
+                              }
+                            }}
+                            className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-zinc-300 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-mono file:bg-cyan-500/20 file:text-cyan-300 file:cursor-pointer hover:border-cyan-500/30 transition-colors"
+                          />
+                          {doc.file && (
+                            <p className="text-[11px] text-cyan-400 font-mono mt-1">
+                              Attached: {doc.file.name} ({(doc.file.size / (1024 * 1024)).toFixed(2)} MB)
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
-                      <div className="sm:col-span-2">
-                        <label className="text-zinc-400 block mb-1 text-[11px]">Document Name</label>
-                        <input
-                          type="text"
-                          value={doc.name}
-                          onChange={(e) => handleUpdateDoc(doc.id, { name: e.target.value })}
-                          placeholder="e.g. Passport or Insurance Card"
-                          className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-zinc-400 block mb-1 text-[11px]">Category</label>
-                        <select
-                          value={doc.category}
-                          onChange={(e) => handleUpdateDoc(doc.id, { category: e.target.value as DocumentCategory })}
-                          className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-                        >
-                          <option value="Identity">Identity</option>
-                          <option value="Medical">Medical</option>
-                          <option value="Insurance">Insurance</option>
-                          <option value="Vehicle">Vehicle</option>
-                          <option value="Property">Property</option>
-                          <option value="Legal">Legal</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-zinc-400 block mb-1 text-[11px]">Expiry Date</label>
-                        <input
-                          type="date"
-                          value={doc.expiryDate}
-                          onChange={(e) => handleUpdateDoc(doc.id, { expiryDate: e.target.value })}
-                          className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-zinc-400 block mb-1 text-[11px]">Emergency Priority</label>
-                        <select
-                          value={doc.emergencyRelevance}
-                          onChange={(e) => handleUpdateDoc(doc.id, { emergencyRelevance: e.target.value as any })}
-                          className="w-full bg-[#0B0D12] border border-white/[0.08] rounded-xl px-3.5 py-2 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-                        >
-                          <option value="Critical">Critical (Immediate Display)</option>
-                          <option value="High">High Priority</option>
-                          <option value="Moderate">Moderate Priority</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

@@ -250,9 +250,9 @@ export const demoEmergencyPlans: EmergencyPlan[] = [
     relevantAssets: ['ast-car'],
     relevantContacts: ['con-rahul', 'con-priya'],
     defaultTasks: [
-      { id: 'task-car-1', title: 'Contact insurance company and file emergency notice', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-car-2', title: 'Bring vehicle documents and physical ID to site/hospital', priority: 'High', defaultAssigneeRole: 'Priya' },
-      { id: 'task-car-3', title: 'Notify immediate family members and confirm status', priority: 'Medium', defaultAssigneeRole: 'Rahul' }
+      { id: 'task-car-1', title: 'Contact insurance company and file emergency notice', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-car-2', title: 'Bring vehicle documents and physical ID to site/hospital', priority: 'High', defaultAssigneeRole: 'Secondary Responder' },
+      { id: 'task-car-3', title: 'Notify immediate family members and confirm status', priority: 'Medium', defaultAssigneeRole: 'Primary Proxy' }
     ],
     sharingRules: [
       'Share digital vehicle insurance and registration with roadside assistance',
@@ -268,13 +268,13 @@ export const demoEmergencyPlans: EmergencyPlan[] = [
     relevantAssets: [],
     relevantContacts: ['con-rahul', 'con-mehta', 'con-priya'],
     defaultTasks: [
-      { id: 'task-med-1', title: 'Hand over Medical Summary & Allergies list to attending doctor', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-med-2', title: 'Present Health Insurance cashless hospitalization card', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-med-3', title: 'Call Dr. Mehta for medical history consultation', priority: 'Medium', defaultAssigneeRole: 'Dr. Mehta' }
+      { id: 'task-med-1', title: 'Hand over Medical Summary & Allergies list to attending doctor', priority: 'High', defaultAssigneeRole: 'Medical Proxy' },
+      { id: 'task-med-2', title: 'Present Health Insurance cashless hospitalization card', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-med-3', title: 'Consult attending physician for medical history', priority: 'Medium', defaultAssigneeRole: 'Medical Proxy' }
     ],
     sharingRules: [
       'Grant temporary access to health insurance card to hospital desk',
-      'Alert Rahul Morgan immediately via emergency phone line'
+      'Alert designated emergency proxy immediately via emergency phone line'
     ]
   },
   {
@@ -286,9 +286,9 @@ export const demoEmergencyPlans: EmergencyPlan[] = [
     relevantAssets: ['ast-apartment'],
     relevantContacts: ['con-rahul', 'con-maya'],
     defaultTasks: [
-      { id: 'task-home-1', title: 'Contact building management and turn off main water/gas valves', priority: 'High', defaultAssigneeRole: 'Maya' },
-      { id: 'task-home-2', title: 'Notify Homeowners Insurance claims representative', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-home-3', title: 'Secure temporary accommodation and safe rendezvous', priority: 'Medium', defaultAssigneeRole: 'Rahul' }
+      { id: 'task-home-1', title: 'Contact building management and turn off main water/gas valves', priority: 'High', defaultAssigneeRole: 'Secondary Responder' },
+      { id: 'task-home-2', title: 'Notify Homeowners Insurance claims representative', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-home-3', title: 'Secure temporary accommodation and safe rendezvous', priority: 'Medium', defaultAssigneeRole: 'Primary Proxy' }
     ],
     sharingRules: [
       'Provide apartment deed details to society secretary and insurer'
@@ -303,9 +303,9 @@ export const demoEmergencyPlans: EmergencyPlan[] = [
     relevantAssets: ['ast-phone'],
     relevantContacts: ['con-rahul', 'con-priya'],
     defaultTasks: [
-      { id: 'task-trv-1', title: 'Contact embassy/consulate for temporary travel certificate', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-trv-2', title: 'Contact international travel medical insurance helpline', priority: 'High', defaultAssigneeRole: 'Priya' },
-      { id: 'task-trv-3', title: 'Block lost cards and verify digital passport copy', priority: 'Medium', defaultAssigneeRole: 'Rahul' }
+      { id: 'task-trv-1', title: 'Contact embassy/consulate for temporary travel certificate', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-trv-2', title: 'Contact international travel medical insurance helpline', priority: 'High', defaultAssigneeRole: 'Secondary Responder' },
+      { id: 'task-trv-3', title: 'Block lost cards and verify digital passport copy', priority: 'Medium', defaultAssigneeRole: 'Primary Proxy' }
     ],
     sharingRules: [
       'Prepare one-click emergency brief with passport copy for embassy'
@@ -320,9 +320,9 @@ export const demoEmergencyPlans: EmergencyPlan[] = [
     relevantAssets: ['ast-phone', 'ast-laptop'],
     relevantContacts: ['con-rahul'],
     defaultTasks: [
-      { id: 'task-id-1', title: 'File lost property police report online', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-id-2', title: 'Lock stolen mobile device via remote IMEI block', priority: 'High', defaultAssigneeRole: 'Rahul' },
-      { id: 'task-id-3', title: 'Request replacement driving license and identity cards', priority: 'Medium', defaultAssigneeRole: 'Rahul' }
+      { id: 'task-id-1', title: 'File lost property police report online', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-id-2', title: 'Lock stolen mobile device via remote IMEI block', priority: 'High', defaultAssigneeRole: 'Primary Proxy' },
+      { id: 'task-id-3', title: 'Request replacement driving license and identity cards', priority: 'Medium', defaultAssigneeRole: 'Primary Proxy' }
     ],
     sharingRules: [
       'Generate verifiable identity dossier for local police and banks'

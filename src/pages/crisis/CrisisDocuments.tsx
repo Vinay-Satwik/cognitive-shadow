@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Calendar, Box, Eye, ExternalLink, Check, Copy } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRelevantDocuments } from '../../lib/crisisEngine';
 import { DocumentItem } from '../../types';
 
 export const CrisisDocuments: React.FC = () => {
@@ -9,9 +8,7 @@ export const CrisisDocuments: React.FC = () => {
   const [viewingDoc, setViewingDoc] = useState<DocumentItem | null>(null);
   const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
 
-  const scenarioDocs = documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id)).length > 0
-    ? documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id))
-    : getRelevantDocuments(crisisSession.scenarioId);
+  const scenarioDocs = documents.filter((d) => crisisSession.surfacedDocuments?.includes(d.id));
 
   const handleCopyDocDetails = (doc: DocumentItem) => {
     const text = `${doc.name}\nCategory: ${doc.category}\nDetails: ${doc.description}\nValid Through: ${doc.expiryDate || 'N/A'}`;
@@ -40,7 +37,7 @@ export const CrisisDocuments: React.FC = () => {
       {/* Filtered Documents Grid */}
       {scenarioDocs.length === 0 ? (
         <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-zinc-400 text-xs font-mono">
-          No relevant document has been configured for this emergency plan.
+          No relevant documents configured.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

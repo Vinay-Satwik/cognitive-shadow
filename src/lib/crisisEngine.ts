@@ -1,33 +1,26 @@
 import { DocumentItem, EmergencyContact, AssetItem, CrisisSession, TimelineEvent } from '../types';
-import { demoDocuments, demoAssets, demoEmergencyContacts } from '../data/demoData';
 import { crisisScenarios } from '../data/crisisScenarios';
 
 /**
- * Cognitive Shadow Context Engine
- * 
- * Core principle:
- * 12 documents → 3 relevant documents
- * 4 contacts → 2 relevant people
- * 5 emergency plans → 1 active crisis scenario
+ * Cognitive Shadow Crisis Engine Helpers
+ * Scoped strictly to authentic data without demo/mock data pollution.
  */
 
 export function getScenario(scenarioId: string) {
   return crisisScenarios[scenarioId] || crisisScenarios['plan-auto-accident'];
 }
 
-export function getRelevantDocuments(scenarioId: string): DocumentItem[] {
-  const scenario = getScenario(scenarioId);
-  return demoDocuments.filter((doc) => scenario.relevantDocumentIds.includes(doc.id));
+// Deprecated fallback stubs - returns empty array if no context available (zero mock pollution)
+export function getRelevantDocuments(_scenarioId: string): DocumentItem[] {
+  return [];
 }
 
-export function getRelevantContacts(scenarioId: string): EmergencyContact[] {
-  const scenario = getScenario(scenarioId);
-  return demoEmergencyContacts.filter((contact) => scenario.relevantContactIds.includes(contact.id));
+export function getRelevantContacts(_scenarioId: string): EmergencyContact[] {
+  return [];
 }
 
-export function getRelevantAssets(scenarioId: string): AssetItem[] {
-  const scenario = getScenario(scenarioId);
-  return demoAssets.filter((asset) => scenario.relevantAssetIds.includes(asset.id));
+export function getRelevantAssets(_scenarioId: string): AssetItem[] {
+  return [];
 }
 
 export function createCrisisSession(scenarioId: string, userName = 'User', userId?: string): CrisisSession {
@@ -41,23 +34,23 @@ export function createCrisisSession(scenarioId: string, userName = 'User', userI
       userId,
       timestamp: timeString,
       title: 'Crisis activated',
-      description: `${scenario.name} engaged by ${userName}. Cognitive Shadow switched to Crisis Mode.`,
+      description: `${scenario.name} engaged by ${userName}. Cognitive Shadow entered Crisis Mode.`,
       type: 'activation'
     },
     {
       id: `evt-${Date.now()}-2`,
       userId,
       timestamp: timeString,
-      title: 'Relevant information prepared',
-      description: `${scenario.relevantDocumentIds.length} relevant documents and ${scenario.relevantContactIds.length} emergency contacts surfaced.`,
+      title: 'Contextual reduction executed',
+      description: 'Zero mock fallbacks. Filtering real user documents and emergency contacts.',
       type: 'document_surfaced'
     },
     {
       id: `evt-${Date.now()}-3`,
       userId,
       timestamp: timeString,
-      title: 'Tasks assigned',
-      description: `${scenario.priorityTasks.length} priority tasks dispatched to CareCircle.`,
+      title: 'Tasks dispatched',
+      description: `${scenario.priorityTasks.length} priority tasks generated; 0 emergency contacts configured.`,
       type: 'task_assigned'
     }
   ];
@@ -70,12 +63,16 @@ export function createCrisisSession(scenarioId: string, userName = 'User', userI
     scenarioEmoji: scenario.emoji,
     activatedAt: timeString,
     status: 'active',
-    surfacedDocuments: scenario.relevantDocumentIds,
-    involvedContacts: scenario.relevantContactIds,
-    primaryContactId: scenario.primaryContactId,
-    primaryAssetId: scenario.primaryAssetId,
-    insurancePolicyName: scenario.insurancePolicyName,
-    tasks: scenario.priorityTasks.map((task) => ({ ...task, userId })),
+    surfacedDocuments: [],
+    involvedContacts: [],
+    primaryContactId: undefined,
+    primaryAssetId: undefined,
+    insurancePolicyName: 'No policy on record',
+    tasks: scenario.priorityTasks.map((task, idx) => ({
+      ...task,
+      id: `tsk-${Date.now()}-${idx + 1}`,
+      userId
+    })),
     timelineEvents: initialTimelineEvents
   };
 }

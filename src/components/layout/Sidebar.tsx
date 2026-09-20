@@ -20,19 +20,10 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { cn } from '../../lib/utils';
-import { EndCrisisModal } from '../crisis/EndCrisisModal';
 
 export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobile }) => {
   const navigate = useNavigate();
-  const { crisisActive, crisisSession, endCrisis, startActivation } = useApp();
-  const [showEndModal, setShowEndModal] = useState(false);
-
-  const handleEndCrisisConfirm = () => {
-    setShowEndModal(false);
-    endCrisis();
-    navigate('/dashboard');
-    if (onCloseMobile) onCloseMobile();
-  };
+  const { crisisActive, crisisSession, startActivation } = useApp();
 
   const normalOverviewNav = [
     { name: 'Dashboard', to: '/dashboard', icon: FileText },
@@ -221,15 +212,8 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
         </div>
 
         {/* Footer Action */}
-        <div className="p-4 border-t border-white/[0.06]">
-          {crisisActive ? (
-            <button
-              onClick={() => setShowEndModal(true)}
-              className="w-full py-2.5 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-white text-xs font-mono font-medium border border-rose-800/40 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-            >
-              <span>END CRISIS</span>
-            </button>
-          ) : (
+        {!crisisActive && (
+          <div className="p-4 border-t border-white/[0.06]">
             <button
               onClick={() => {
                 startActivation();
@@ -244,16 +228,9 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
-
-      {/* Confirmation Modal for End Crisis */}
-      <EndCrisisModal
-        isOpen={showEndModal}
-        onClose={() => setShowEndModal(false)}
-        onConfirm={handleEndCrisisConfirm}
-      />
     </>
   );
 };

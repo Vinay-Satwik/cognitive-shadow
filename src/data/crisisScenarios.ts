@@ -8,17 +8,17 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
     description: 'Immediate vehicle identification, roadside insurance claims, and emergency family coordination.',
     briefSubtitle: 'Vehicle collision or severe roadside emergency protocol',
     relevantDocumentIds: ['doc-vehicle-ins', 'doc-vehicle-reg', 'doc-driver-lic'],
-    relevantContactIds: ['con-rahul', 'con-priya'],
+    relevantContactIds: [],
     relevantAssetIds: ['ast-car'],
-    primaryContactId: 'con-rahul',
+    primaryContactId: undefined,
     primaryAssetId: 'ast-car',
-    insurancePolicyName: 'Vehicle Insurance Policy (National Insurance #488102)',
+    insurancePolicyName: 'Vehicle Insurance Policy',
     priorityTasks: [
       {
         id: 'tsk-auto-1',
         title: 'Contact insurance provider',
-        description: 'Call National Insurance claims helpline (#488102) and report accident location.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Call claims helpline and report accident location.',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'Critical'
       },
@@ -26,7 +26,7 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
         id: 'tsk-auto-2',
         title: 'Bring vehicle documents',
         description: 'Bring physical vehicle registration (RC) and driving license copy to the site or service depot.',
-        assignedTo: 'Priya Morgan',
+        assignedTo: 'Secondary Responder',
         status: 'In Progress',
         priority: 'High'
       },
@@ -34,7 +34,7 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
         id: 'tsk-auto-3',
         title: 'Notify immediate family',
         description: 'Check in with immediate family members and confirm well-being status.',
-        assignedTo: 'Rahul Morgan',
+        assignedTo: 'Primary Proxy',
         status: 'Completed',
         priority: 'High'
       }
@@ -48,33 +48,33 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
     description: 'Sudden hospitalization, severe illness, or acute medical incapacitation.',
     briefSubtitle: 'Hospitalization and medical proxy coordination protocol',
     relevantDocumentIds: ['doc-health-ins', 'doc-med-sum', 'doc-will'],
-    relevantContactIds: ['con-rahul', 'con-mehta', 'con-priya'],
+    relevantContactIds: [],
     relevantAssetIds: [],
-    primaryContactId: 'con-rahul',
+    primaryContactId: undefined,
     primaryAssetId: undefined,
-    insurancePolicyName: 'Family Health Insurance (Cashless TPA #HLT-99214)',
+    insurancePolicyName: 'Family Health Insurance',
     priorityTasks: [
       {
         id: 'tsk-med-1',
         title: 'Present Medical Summary & Allergies',
-        description: 'Hand over physician-certified medical history (penicillin allergy, O+ blood type) to attending medical team.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Hand over physician-certified medical history to attending medical team.',
+        assignedTo: 'Medical Proxy',
         status: 'In Progress',
         priority: 'Critical'
       },
       {
         id: 'tsk-med-2',
         title: 'Authorize Health Insurance cashless desk',
-        description: 'Submit cashless hospitalization pre-authorization request with TPA insurance card.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Submit cashless hospitalization pre-authorization request with insurance documentation.',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'Critical'
       },
       {
         id: 'tsk-med-3',
-        title: 'Consult Dr. Mehta on medical history',
-        description: 'Call Dr. Mehta for physician-to-physician handoff consultation.',
-        assignedTo: 'Dr. Mehta',
+        title: 'Consult attending physician on medical history',
+        description: 'Contact primary doctor for physician-to-physician handoff consultation.',
+        assignedTo: 'Medical Proxy',
         status: 'Pending',
         priority: 'High'
       }
@@ -88,33 +88,33 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
     description: 'Catastrophic fire, major structural damage, water pipe burst, or building evacuation.',
     briefSubtitle: 'Residential property contingency and emergency claim protocol',
     relevantDocumentIds: ['doc-home-ins', 'doc-prop-doc'],
-    relevantContactIds: ['con-rahul', 'con-maya'],
+    relevantContactIds: [],
     relevantAssetIds: ['ast-apartment'],
-    primaryContactId: 'con-rahul',
+    primaryContactId: undefined,
     primaryAssetId: 'ast-apartment',
-    insurancePolicyName: 'Home & Contents Insurance (Policy #HOM-9901)',
+    insurancePolicyName: 'Home & Contents Insurance',
     priorityTasks: [
       {
         id: 'tsk-home-1',
         title: 'Coordinate building management & utilities',
         description: 'Verify gas and water mains are shut off with building security.',
-        assignedTo: 'Maya Vance',
+        assignedTo: 'Secondary Responder',
         status: 'In Progress',
         priority: 'Critical'
       },
       {
         id: 'tsk-home-2',
         title: 'File Home Insurance initial claim notice',
-        description: 'Log formal claim ticket with policy number #HOM-9901 for immediate adjuster dispatch.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Log formal claim ticket with policy for immediate adjuster dispatch.',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'High'
       },
       {
         id: 'tsk-home-3',
         title: 'Arrange temporary accommodation',
-        description: 'Confirm hotel or family stay location for the next 72 hours.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Confirm hotel or safe family stay location for the next 72 hours.',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'Medium'
       }
@@ -128,17 +128,17 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
     description: 'Overseas emergency: lost passport, flight strandings, international injury, or consular support.',
     briefSubtitle: 'International travel contingency and consular brief',
     relevantDocumentIds: ['doc-passport', 'doc-health-ins', 'doc-phone-inv'],
-    relevantContactIds: ['con-rahul', 'con-priya'],
+    relevantContactIds: [],
     relevantAssetIds: ['ast-phone'],
-    primaryContactId: 'con-rahul',
+    primaryContactId: undefined,
     primaryAssetId: 'ast-phone',
-    insurancePolicyName: 'International Travel & Medical Insurance (#TRV-8812)',
+    insurancePolicyName: 'International Travel & Medical Insurance',
     priorityTasks: [
       {
         id: 'tsk-trv-1',
         title: 'Contact Embassy / Consulate hotline',
         description: 'Request expedited Emergency Travel Certificate using verified digital passport copy.',
-        assignedTo: 'Rahul Morgan',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'Critical'
       },
@@ -146,7 +146,7 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
         id: 'tsk-trv-2',
         title: 'Notify international travel insurer',
         description: 'Activate 24/7 global travel medical emergency assistance line.',
-        assignedTo: 'Priya Morgan',
+        assignedTo: 'Secondary Responder',
         status: 'In Progress',
         priority: 'High'
       },
@@ -154,7 +154,7 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
         id: 'tsk-trv-3',
         title: 'Secure credit lines & backup communications',
         description: 'Enable emergency roaming or eSIM data package and notify bank of overseas incident.',
-        assignedTo: 'Rahul Morgan',
+        assignedTo: 'Primary Proxy',
         status: 'Completed',
         priority: 'Medium'
       }
@@ -168,33 +168,33 @@ export const crisisScenarios: Record<string, EmergencyScenario> = {
     description: 'Theft or loss of wallet, core phone, passport, driving license, or critical identity credentials.',
     briefSubtitle: 'Identity protection and emergency document replacement protocol',
     relevantDocumentIds: ['doc-driver-lic', 'doc-passport', 'doc-phone-inv', 'doc-laptop-inv'],
-    relevantContactIds: ['con-rahul'],
+    relevantContactIds: [],
     relevantAssetIds: ['ast-phone', 'ast-laptop'],
-    primaryContactId: 'con-rahul',
+    primaryContactId: undefined,
     primaryAssetId: 'ast-phone',
-    insurancePolicyName: 'AppleCare+ Theft & Loss / Personal Cyber Cover',
+    insurancePolicyName: 'Theft & Loss / Cyber Cover',
     priorityTasks: [
       {
         id: 'tsk-id-1',
         title: 'File lost property police report online',
         description: 'Obtain official police acknowledgment receipt number for document reissuance.',
-        assignedTo: 'Rahul Morgan',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'Critical'
       },
       {
         id: 'tsk-id-2',
-        title: 'Remotely lock iPhone 16 Pro via Find My',
-        description: 'Put iPhone 16 Pro (IMEI ending 4821) into Lost Mode and file AppleCare+ Theft & Loss claim.',
-        assignedTo: 'Rahul Morgan',
+        title: 'Remotely lock devices via cloud services',
+        description: 'Put primary mobile device into Lost Mode and file insurance claim.',
+        assignedTo: 'Primary Proxy',
         status: 'In Progress',
         priority: 'Critical'
       },
       {
         id: 'tsk-id-3',
         title: 'Request duplicate Driving License & Identity documents',
-        description: 'Submit online application for duplicate license using verified license records.',
-        assignedTo: 'Rahul Morgan',
+        description: 'Submit online application for duplicate license using verified records.',
+        assignedTo: 'Primary Proxy',
         status: 'Pending',
         priority: 'High'
       }

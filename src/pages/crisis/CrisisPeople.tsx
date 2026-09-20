@@ -1,14 +1,10 @@
 import React from 'react';
 import { Users, Phone, Mail, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRelevantContacts } from '../../lib/crisisEngine';
-
 export const CrisisPeople: React.FC = () => {
   const { crisisSession, contacts } = useApp();
 
-  const relevantPeople = contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id)).length > 0
-    ? contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id))
-    : getRelevantContacts(crisisSession.scenarioId);
+  const relevantPeople = contacts.filter((c) => crisisSession.involvedContacts?.includes(c.id));
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -30,7 +26,7 @@ export const CrisisPeople: React.FC = () => {
       {/* Relevant Contacts Grid */}
       {relevantPeople.length === 0 ? (
         <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-zinc-400 text-xs font-mono">
-          No emergency contacts have been configured for this emergency plan.
+          No emergency contact configured.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

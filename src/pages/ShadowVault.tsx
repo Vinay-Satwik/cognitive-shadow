@@ -13,22 +13,94 @@ import {
   AlertTriangle,
   X,
   Save,
-  Check
+  Check,
+  Upload,
+  Download,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DocumentCategory, Document } from '../types';
 
+export function parseAndValidateExpiryDate(dateStr: string): { isValid: boolean; storageValue: string | null; error?: string } {
+  if (!dateStr || dateStr.trim() === '') {
+    return { isValid: true, storageValue: null }; // Optional: blank is valid
+  }
+
+  const trimmed = dateStr.trim();
+
+  // Format 1: YYYY-MM-DD
+  const isoPattern = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+  const isoMatch = trimmed.match(isoPattern);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10);
+    const day = parseInt(isoMatch[3], 10);
+    const d = new Date(year, month - 1, day);
+    if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+      return { isValid: true, storageValue: trimmed };
+    }
+  }
+
+  // Format 2: Mon YYYY or Month YYYY (e.g. "Oct 2026", "October 2026")
+  const monthsMap: Record<string, string> = {
+    jan: '01', january: '01', feb: '02', february: '02', mar: '03', march: '03',
+    apr: '04', april: '04', may: '05', jun: '06', june: '06', jul: '07', july: '07',
+    aug: '08', august: '08', sep: '09', september: '09', oct: '10', october: '10',
+    nov: '11', november: '11', dec: '12', december: '12'
+  };
+  const monthYearPattern = /^(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})$/i;
+  const myMatch = trimmed.match(monthYearPattern);
+  if (myMatch) {
+    const mStr = myMatch[1].toLowerCase();
+    const year = parseInt(myMatch[2], 10);
+    if (monthsMap[mStr] && year >= 1900 && year <= 2100) {
+      return { isValid: true, storageValue: `${year}-${monthsMap[mStr]}-01` };
+    }
+  }
+
+  // Format 3: MM/YYYY or MM-YYYY
+  const mmyyyyPattern = /^(0[1-9]|1[0-2])[/-](\d{4})$/;
+  const mmMatch = trimmed.match(mmyyyyPattern);
+  if (mmMatch) {
+    const mm = mmMatch[1];
+    const year = parseInt(mmMatch[2], 10);
+    if (year >= 1900 && year <= 2100) {
+      return { isValid: true, storageValue: `${year}-${mm}-01` };
+    }
+  }
+
+  return {
+    isValid: false,
+    storageValue: null,
+    error: 'Invalid format. Use YYYY-MM-DD (e.g. 2027-12-31) or Mon YYYY (e.g. Oct 2026).'
+  };
+}
+
+export function isValidExpiryDate(dateStr: string): boolean {
+  return parseAndValidateExpiryDate(dateStr).isValid;
+}
+
 export const ShadowVault: React.FC = () => {
-  const { documents, addDocument, updateDocument, deleteDocument, assets } = useApp();
+  const { documents, setDocuments, addDocument, updateDocument, deleteDocument, assets } = useApp();
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Inspection modal state
   const [selectedDocModal, setSelectedDocModal] = useState<Document | null>(null);
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
 
   // Form modal state (Add / Edit)
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
+
+  // Upload file state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Form fields
   const [formName, setFormName] = useState('');
@@ -38,6 +110,8 @@ export const ShadowVault: React.FC = () => {
   const [formRelatedAsset, setFormRelatedAsset] = useState<string>('');
   const [formEmergencyRelevance, setFormEmergencyRelevance] = useState<'Critical' | 'High' | 'Moderate' | 'Low'>('High');
   const [formAccessLevel, setFormAccessLevel] = useState('Important');
+
+  const isExpiryValid = isValidExpiryDate(formExpiryDate);
 
   // Delete confirmation modal state
   const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<Document | null>(null);
@@ -55,6 +129,8 @@ export const ShadowVault: React.FC = () => {
 
   const openAddModal = () => {
     setEditingDocId(null);
+    setSelectedFile(null);
+    setUploadError(null);
     setFormName('');
     setFormCategory('Identity');
     setFormDescription('');
@@ -68,6 +144,8 @@ export const ShadowVault: React.FC = () => {
   const openEditModal = (doc: Document, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditingDocId(doc.id);
+    setSelectedFile(null);
+    setUploadError(null);
     setFormName(doc.name);
     setFormCategory(doc.category);
     setFormDescription(doc.description);
@@ -79,33 +157,235 @@ export const ShadowVault: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) return;
+
+    // Validate and normalize Expiry Date format
+    const expiryCheck = parseAndValidateExpiryDate(formExpiryDate);
+    if (!expiryCheck.isValid) {
+      setUploadError(expiryCheck.error || 'Invalid date format. Use YYYY-MM-DD (e.g. 2027-12-31) or Mon YYYY (e.g. Oct 2026), or leave blank.');
+      return;
+    }
+    const normalizedExpiry = expiryCheck.storageValue;
 
     if (editingDocId) {
       updateDocument(editingDocId, {
         name: formName.trim(),
         category: formCategory,
         description: formDescription.trim(),
-        expiryDate: formExpiryDate.trim() || undefined,
+        expiryDate: normalizedExpiry || undefined,
         relatedAsset: formRelatedAsset || undefined,
         emergencyRelevance: formEmergencyRelevance,
         accessLevel: formAccessLevel
       });
-    } else {
-      addDocument({
-        name: formName.trim(),
-        category: formCategory,
-        description: formDescription.trim(),
-        expiryDate: formExpiryDate.trim() || undefined,
-        relatedAsset: formRelatedAsset || undefined,
-        emergencyRelevance: formEmergencyRelevance,
-        accessLevel: formAccessLevel
-      });
+
+      if (isSupabaseConfigured && supabase && user?.id) {
+        supabase
+          .from('documents')
+          .update({
+            name: formName.trim(),
+            category: formCategory,
+            description: formDescription.trim(),
+            expiry_date: normalizedExpiry,
+            related_asset: formRelatedAsset || null,
+            emergency_access_level: formEmergencyRelevance === 'Critical' ? 'Critical' : 'Important'
+          })
+          .eq('id', editingDocId)
+          .eq('user_id', user.id)
+          .then(({ error }) => {
+            if (error) console.warn('[Vault] Error updating document in Supabase:', error.message);
+          });
+      }
+
+      setIsFormOpen(false);
+      return;
     }
 
-    setIsFormOpen(false);
+    // New Document Upload Flow
+    setIsUploading(true);
+    setUploadError(null);
+
+    // Verify authenticated user's session exists at upload time and matches user.id
+    if (isSupabaseConfigured && supabase) {
+      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+      const authUid = sessionData?.session?.user?.id;
+      if (sessionErr || !sessionData?.session || !authUid) {
+        setIsUploading(false);
+        setUploadError('Active authentication session not found. Please log in again.');
+        return;
+      }
+      if (authUid !== user?.id) {
+        setIsUploading(false);
+        setUploadError('Authentication error: auth.uid() does not match the active user profile.');
+        return;
+      }
+    }
+
+    let filePath = '';
+    let fileSize = selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : '0.1 MB';
+    let fileType = selectedFile
+      ? selectedFile.type.includes('pdf')
+        ? 'PDF'
+        : selectedFile.type.includes('png')
+        ? 'PNG'
+        : 'JPEG'
+      : 'PDF';
+
+    if (selectedFile) {
+      if (selectedFile.size > 2 * 1024 * 1024) {
+        setIsUploading(false);
+        setUploadError('File is too large. Maximum allowed size is 2 MB.');
+        return;
+      }
+      const validMime = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      const validExt = /\.(pdf|png|jpe?g)$/i.test(selectedFile.name);
+      if (!validMime.includes(selectedFile.type) && !validExt) {
+        setIsUploading(false);
+        setUploadError('Invalid file type. Only PDF, PNG, and JPEG/JPG are allowed.');
+        return;
+      }
+    }
+
+    try {
+      if (selectedFile && isSupabaseConfigured && supabase && user?.id) {
+        const fileExt = selectedFile.name.split('.').pop() || 'pdf';
+        const storagePath = `${user.id}/doc-${Date.now()}.${fileExt}`;
+        const { error: upErr } = await supabase.storage
+          .from('documents')
+          .upload(storagePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (upErr) {
+          const status = (upErr as any).status || (upErr as any).statusCode || 'UNKNOWN';
+          console.error('[DocumentUpload] Storage upload failed:', {
+            message: upErr.message,
+            name: upErr.name,
+            status: (upErr as any).status,
+            statusCode: (upErr as any).statusCode || (upErr as any).status,
+            details: (upErr as any).details || (upErr as any).error,
+            hint: (upErr as any).hint
+          });
+          throw new Error(`Upload failed: ${upErr.message}${status !== 'UNKNOWN' ? ` (${status})` : ''}`);
+        }
+        filePath = storagePath;
+      }
+
+      // Save to Supabase and local state
+      if (isSupabaseConfigured && supabase && user?.id) {
+        const { data: docRow, error: insErr } = await supabase
+          .from('documents')
+          .insert({
+            user_id: user.id,
+            name: formName.trim(),
+            category: formCategory,
+            description: formDescription.trim(),
+            expiry_date: normalizedExpiry,
+            related_asset: formRelatedAsset || null,
+            emergency_access_level: formEmergencyRelevance === 'Critical' ? 'Critical' : 'Important',
+            file_path: filePath,
+            file_size: fileSize,
+            file_type: fileType
+          })
+          .select()
+          .single();
+
+        if (insErr) {
+          // Rollback uploaded storage object to prevent orphan files
+          if (filePath) {
+            console.warn('[DocumentUpload] Database insert failed, removing orphaned storage object:', filePath);
+            await supabase.storage.from('documents').remove([filePath]).catch((cleanErr) => {
+              console.error('[DocumentUpload] Failed to clean up orphaned storage object:', cleanErr);
+            });
+          }
+          console.error('[DocumentUpload] Database insert failed:', {
+            message: insErr.message,
+            code: insErr.code,
+            details: insErr.details,
+            hint: insErr.hint
+          });
+          throw new Error(`Database save failed: ${insErr.message} (Code: ${insErr.code || 'UNKNOWN'})`);
+        }
+
+        if (docRow) {
+          const newDoc: Document = {
+            id: docRow.id,
+            userId: user.id,
+            name: docRow.name,
+            category: docRow.category,
+            description: docRow.description || '',
+            expiryDate: docRow.expiry_date || undefined,
+            relatedAsset: docRow.related_asset || undefined,
+            emergencyRelevance: (docRow.emergency_access_level === 'Critical' ? 'Critical' : 'High') as any,
+            accessLevel: docRow.emergency_access_level,
+            uploadDate: 'Today',
+            filePath: docRow.file_path || undefined,
+            fileSize: docRow.file_size || fileSize,
+            fileType: docRow.file_type || fileType
+          };
+          setDocuments((prev) => [newDoc, ...prev]);
+        }
+      } else {
+        // Fallback for offline or unauthenticated mode
+        addDocument({
+          name: formName.trim(),
+          category: formCategory,
+          description: formDescription.trim(),
+          expiryDate: normalizedExpiry || undefined,
+          relatedAsset: formRelatedAsset || undefined,
+          emergencyRelevance: formEmergencyRelevance,
+          accessLevel: formAccessLevel,
+          filePath: filePath || undefined,
+          fileSize,
+          fileType
+        });
+      }
+
+      setIsFormOpen(false);
+    } catch (err: any) {
+      console.error('[DocumentUpload] Operation failed:', {
+        message: err?.message,
+        name: err?.name,
+        status: err?.status,
+        statusCode: err?.statusCode || err?.status,
+        details: err?.details,
+        hint: err?.hint
+      });
+      setUploadError(err.message || 'Failed to upload document. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleViewDownload = async (doc: Document) => {
+    if (!doc.filePath) {
+      alert('This document record does not have an attached storage file.');
+      return;
+    }
+    if (!isSupabaseConfigured || !supabase) {
+      alert('Supabase is not configured.');
+      return;
+    }
+
+    setIsGeneratingUrl(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.filePath, 3600);
+
+      if (error || !data?.signedUrl) {
+        throw new Error(error?.message || 'Failed to generate secure URL.');
+      }
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err: any) {
+      console.error('[Vault] Error generating signed URL:', err);
+      alert(`Unable to open document: ${err.message}`);
+    } finally {
+      setIsGeneratingUrl(false);
+    }
   };
 
   const handleDeleteConfirm = () => {
@@ -155,10 +435,10 @@ export const ShadowVault: React.FC = () => {
 
           <button
             onClick={openAddModal}
-            className="px-5 py-3 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 flex items-center gap-2 transition-all cursor-pointer shadow-sm self-stretch sm:self-auto justify-center"
+            className="px-5 py-3 rounded-2xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-mono border border-cyan-500/40 flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-cyan-950/40 self-stretch sm:self-auto justify-center"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Document</span>
+            <Upload className="w-4 h-4" />
+            <span>+ Upload Document</span>
           </button>
         </div>
       </div>
@@ -199,12 +479,14 @@ export const ShadowVault: React.FC = () => {
       {filteredDocs.length === 0 ? (
         <div className="p-12 text-center rounded-3xl bg-[#0B0D12] border border-white/[0.06] space-y-3">
           <FileText className="w-8 h-8 text-zinc-600 mx-auto" />
-          <p className="text-zinc-400 text-sm font-light">No documents found matching the filter.</p>
+          <p className="text-zinc-400 text-sm font-light">
+            {documents.length === 0 ? 'Your personal document vault is currently empty.' : 'No documents found matching the filter.'}
+          </p>
           <button
             onClick={openAddModal}
             className="text-xs font-mono text-cyan-400 hover:underline cursor-pointer"
           >
-            Add a new document
+            + Upload Document
           </button>
         </div>
       ) : (
@@ -273,6 +555,18 @@ export const ShadowVault: React.FC = () => {
                   )}
 
                   <div className="flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                    {doc.filePath && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDownload(doc);
+                        }}
+                        title="View / Download Document"
+                        className="p-1 rounded hover:bg-cyan-500/10 text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => openEditModal(doc, e)}
                       title="Edit Document"
@@ -340,6 +634,32 @@ export const ShadowVault: React.FC = () => {
               </div>
             </div>
 
+            {/* Storage File Link */}
+            {selectedDocModal.filePath ? (
+              <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 flex items-center justify-between font-mono text-xs">
+                <div className="flex items-center gap-2 text-cyan-300">
+                  <FileText className="w-4 h-4" />
+                  <span>{selectedDocModal.fileType || 'PDF'} • {selectedDocModal.fileSize || 'Attached'}</span>
+                </div>
+                <button
+                  onClick={() => handleViewDownload(selectedDocModal)}
+                  disabled={isGeneratingUrl}
+                  className="px-3.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-mono border border-cyan-500/30 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isGeneratingUrl ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  )}
+                  <span>View / Download Document</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-[11px] font-mono text-zinc-500 italic">
+                No storage file attached (metadata record).
+              </div>
+            )}
+
             <div className="flex justify-between items-center pt-2">
               <div className="flex items-center gap-2">
                 <button
@@ -379,7 +699,7 @@ export const ShadowVault: React.FC = () => {
                   <FileText className="w-4 h-4" />
                 </div>
                 <h3 className="text-lg font-medium text-white">
-                  {editingDocId ? 'Edit Vault Document' : 'Add New Document'}
+                  {editingDocId ? 'Edit Vault Document' : 'Upload Vault Document'}
                 </h3>
               </div>
               <button
@@ -391,6 +711,52 @@ export const ShadowVault: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveForm} className="space-y-4 text-xs font-mono">
+              {!editingDocId && (
+                <div>
+                  <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">
+                    Document File (.PDF, .PNG, .JPG, Max 2MB) *
+                  </label>
+                  <input
+                    type="file"
+                    required
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const validMime = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+                        const validExt = /\.(pdf|png|jpe?g)$/i.test(file.name);
+                        if (!validMime.includes(file.type) && !validExt) {
+                          setUploadError('Invalid file type. Only PDF, PNG, and JPEG/JPG are allowed.');
+                          setSelectedFile(null);
+                          return;
+                        }
+                        if (file.size > 2 * 1024 * 1024) {
+                          setUploadError('File is too large. Maximum allowed size is 2 MB.');
+                          setSelectedFile(null);
+                          return;
+                        }
+                        setSelectedFile(file);
+                        setUploadError(null);
+                        if (!formName.trim()) {
+                          const base = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+                          setFormName(base);
+                        }
+                      }
+                    }}
+                    className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2 text-xs text-zinc-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-mono file:bg-cyan-500/20 file:text-cyan-300 file:cursor-pointer hover:border-cyan-500/30 transition-colors"
+                  />
+                  {selectedFile && (
+                    <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-mono text-cyan-400">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Ready: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                    </div>
+                  )}
+                  {uploadError && (
+                    <p className="text-[11px] text-rose-400 font-mono mt-1">{uploadError}</p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Document Title *</label>
                 <input
@@ -457,8 +823,17 @@ export const ShadowVault: React.FC = () => {
                     placeholder="e.g. Oct 2026 or YYYY-MM-DD"
                     value={formExpiryDate}
                     onChange={(e) => setFormExpiryDate(e.target.value)}
-                    className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                    className={`w-full bg-[#08090C] border ${
+                      !isExpiryValid && formExpiryDate.trim() !== ''
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-white/[0.08] focus:border-cyan-500/50'
+                    } rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none transition-colors`}
                   />
+                  {!isExpiryValid && formExpiryDate.trim() !== '' && (
+                    <p className="text-[11px] text-rose-400 font-mono mt-1">
+                      Invalid format. Use YYYY-MM-DD (e.g. 2027-12-31) or Mon YYYY (e.g. Oct 2026).
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -488,10 +863,20 @@ export const ShadowVault: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-semibold text-xs font-mono border border-cyan-500/40 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+                  disabled={isUploading || (!isExpiryValid && formExpiryDate.trim() !== '')}
+                  className="px-6 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-cyan-300 font-semibold text-xs font-mono border border-cyan-500/40 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{editingDocId ? 'Save Changes' : 'Add to Vault'}</span>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Uploading to Vault...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{editingDocId ? 'Save Changes' : 'Upload & Encrypt'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

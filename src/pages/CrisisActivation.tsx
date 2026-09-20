@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Flame, X, FileText, Users, CheckSquare, FileCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -18,21 +18,34 @@ export const CrisisActivation: React.FC = () => {
     userProfile
   } = useApp();
 
+  const [isActivating, setIsActivating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // Dynamically compute contextual results using the central contextEngine
   const preview = useMemo(() => {
-    return contextEngine.filter(
-      selectedPlan.id,
+    return contextEngine.generateCrisisContext({
+      scenario: selectedPlan.id,
       documents,
       assets,
-      contacts,
-      selectedPlan,
-      userProfile
-    );
-  }, [selectedPlan, documents, assets, contacts, userProfile]);
+      emergencyContacts: contacts,
+      emergencyPlans: plans,
+      profile: userProfile
+    });
+  }, [selectedPlan, documents, assets, contacts, userProfile, plans]);
 
-  const handleActivate = () => {
-    confirmCrisisActivation(selectedPlan.id);
-    navigate('/crisis');
+  const handleActivate = async () => {
+    if (isActivating) return;
+    setIsActivating(true);
+    setError(null);
+    try {
+      await confirmCrisisActivation(selectedPlan.id);
+      navigate('/crisis');
+    } catch (err: any) {
+      console.error('[Crisis Activation Error]', err);
+      const detail = err?.message ? ` (${err.message})` : '';
+      setError(`Unable to activate crisis mode. Please try again.${detail}`);
+      setIsActivating(false);
+    }
   };
 
   const handleCancel = () => {
@@ -125,21 +138,30 @@ export const CrisisActivation: React.FC = () => {
         </p>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-xs font-mono text-rose-300">
+          {error}
+        </div>
+      )}
+
       {/* 4. Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
         <button
           onClick={handleCancel}
-          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          disabled={isActivating}
+          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 disabled:opacity-50 transition-colors cursor-pointer"
         >
           Cancel and return to standby
         </button>
 
         <button
           onClick={handleActivate}
-          className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-sm font-mono flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(244,63,94,0.35)] transition-all cursor-pointer"
+          disabled={isActivating}
+          className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-medium text-sm font-mono flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(244,63,94,0.35)] transition-all cursor-pointer disabled:cursor-not-allowed"
         >
           <Flame className="w-4 h-4" />
-          <span>ACTIVATE CRISIS MODE</span>
+          <span>{isActivating ? 'ENGAGING PROTOCOL...' : 'ACTIVATE CRISIS MODE'}</span>
         </button>
       </div>
     </div>

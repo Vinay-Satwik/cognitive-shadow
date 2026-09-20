@@ -113,7 +113,11 @@ function mapSupabaseProfileToUser(authUser: any, profile?: any): User {
     medicalNotes: profile?.medical_notes || '',
     emergencyDirective: profile?.emergency_directive || '',
     primaryLocation: profile?.primary_location || '',
-    hasCompletedOnboarding: profile?.has_completed_onboarding ?? false,
+    hasCompletedOnboarding: Boolean(
+      profile?.has_completed_onboarding ??
+      authUser.user_metadata?.has_completed_onboarding ??
+      false
+    ),
     createdAt: profile?.created_at || authUser.created_at || new Date().toISOString(),
     updatedAt: profile?.updated_at
   };
@@ -369,35 +373,108 @@ const supabaseAuthService: AuthService = {
     if (updates.hasCompletedOnboarding !== undefined) profileUpdates.has_completed_onboarding = updates.hasCompletedOnboarding;
     if (updates.avatar !== undefined) profileUpdates.avatar_url = updates.avatar;
 
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: authData.user.email,
-        ...profileUpdates
-      }, { onConflict: 'id' });
-
-    if (error) {
-      console.warn('[Supabase Auth] Failed to update profiles table:', error);
-      throw new Error(error.message);
-    }
-
-    // Also sync Supabase Auth user metadata
+    // 1. Sync Supabase Auth user metadata first (always accessible to authenticated user)
+    const userMetaUpdates: Record<string, any> = {};
     if (updates.name) {
-      await supabase.auth.updateUser({
-        data: {
-          full_name: updates.name,
-          name: updates.name,
-          first_name: updates.name.trim().split(' ')[0]
+      userMetaUpdates.full_name = updates.name.trim();
+      userMetaUpdates.name = updates.name.trim();
+      userMetaUpdates.first_name = updates.name.trim().split(' ')[0];
+    }
+    if (updates.hasCompletedOnboarding !== undefined) {
+      userMetaUpdates.has_completed_onboarding = updates.hasCompletedOnboarding;
+    }
+    if (updates.phone !== undefined) userMetaUpdates.phone = updates.phone;
+    if (updates.bloodGroup !== undefined) userMetaUpdates.blood_group = updates.bloodGroup;
+    if (updates.allergies !== undefined) userMetaUpdates.allergies = updates.allergies;
+    if (updates.primaryLocation !== undefined) userMetaUpdates.primary_location = updates.primaryLocation;
+
+    if (Object.keys(userMetaUpdates).length > 0) {
+      try {
+        const { data: updatedAuthUser, error: metaErr } = await supabase.auth.updateUser({
+          data: userMetaUpdates
+        });
+        if (metaErr) {
+          console.warn('[Supabase Auth] Metadata update notice:', {
+            message: metaErr.message,
+            status: metaErr.status
+          });
+        } else if (updatedAuthUser?.user) {
+          authData.user = updatedAuthUser.user;
         }
-      });
+      } catch (metaCatch) {
+        console.warn('[Supabase Auth] Metadata sync exception:', metaCatch);
+      }
     }
 
-    const { data: updatedProfile } = await supabase
+    // 2. Target public.profiles table using authenticated user's ID
+    let updatedProfile: any = null;
+    const { data: updatedRows, error: updateError } = await supabase
       .from('profiles')
-      .select('*')
+      .update(profileUpdates)
       .eq('id', authData.user.id)
-      .maybeSingle();
+      .select();
+
+    if (!updateError && updatedRows && updatedRows.length > 0) {
+      updatedProfile = updatedRows[0];
+    } else {
+      if (updateError) {
+        console.warn('[Supabase Auth] Direct update notice, attempting upsert:', {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        });
+      }
+
+      const metaName = authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || updates.name || '';
+      const metaFirst = authData.user.user_metadata?.first_name || (metaName ? metaName.split(' ')[0] : '');
+
+      const newProfilePayload = {
+        id: authData.user.id,
+        email: authData.user.email || '',
+        full_name: updates.name ? updates.name.trim() : metaName,
+        first_name: updates.name ? updates.name.trim().split(' ')[0] : metaFirst,
+        ...profileUpdates
+      };
+
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(newProfilePayload, { onConflict: 'id' })
+        .select()
+        .maybeSingle();
+
+      if (upsertError) {
+        console.error('[Supabase Auth] Profile table upsert error:', {
+          message: upsertError.message,
+          code: upsertError.code,
+          details: upsertError.details,
+          hint: upsertError.hint
+        });
+        if (upsertError.code === '42501') {
+          console.warn(
+            '[Supabase Auth] 42501 Permission Denied on public.profiles: Run supabase/migrations/002_fix_profiles_and_grants.sql in the Supabase SQL Editor.'
+          );
+        }
+      } else {
+        updatedProfile = upsertData;
+      }
+    }
+
+    // 3. Fallback select if updatedProfile is not set
+    if (!updatedProfile) {
+      try {
+        const { data: fetchedProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+        if (fetchedProfile) {
+          updatedProfile = fetchedProfile;
+        }
+      } catch (fErr) {
+        console.warn('[Supabase Auth] Profile fallback select note:', fErr);
+      }
+    }
 
     return mapSupabaseProfileToUser(authData.user, updatedProfile);
   },

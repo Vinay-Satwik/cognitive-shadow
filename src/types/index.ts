@@ -37,6 +37,7 @@ export interface Document {
   emergencyRelevance: 'Critical' | 'High' | 'Moderate' | 'Low';
   accessLevel?: string;
   uploadDate: string;
+  filePath?: string;
   fileSize?: string;
   fileType?: string;
   tags?: string[];
@@ -137,8 +138,13 @@ export interface SecureAccess {
   userId?: string;
   recipient: string;
   recipientEmail?: string;
+  roleOrPurpose?: string;
+  crisisSessionId?: string;
+  scenario?: string;
   documents: string[];
+  scope?: string[];
   expiration: string;
+  expiresAt?: string;
   status: 'Active' | 'Revoked' | 'Expired';
   createdAt: string;
   revokedAt?: string;
@@ -173,7 +179,7 @@ export interface EmergencyScenario {
   relevantDocumentIds: string[];
   relevantContactIds: string[];
   relevantAssetIds: string[];
-  primaryContactId: string;
+  primaryContactId?: string;
   primaryAssetId?: string;
   insurancePolicyName: string;
   priorityTasks: {

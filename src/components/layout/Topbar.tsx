@@ -189,7 +189,7 @@ export const Topbar: React.FC<{ onOpenMobileMenu: () => void }> = ({ onOpenMobil
                   <button
                     onClick={() => {
                       setProfileDropdownOpen(false);
-                      navigate('/onboarding');
+                      navigate('/onboarding?mode=rerun');
                     }}
                     className="w-full px-4 py-2 text-left text-zinc-300 hover:text-white hover:bg-white/[0.04] flex items-center gap-2.5 transition-colors cursor-pointer"
                   >

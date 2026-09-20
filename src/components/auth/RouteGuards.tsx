@@ -26,8 +26,12 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
     return <Navigate to="/onboarding" replace />;
   }
 
-  // If authenticated user has already completed onboarding, block re-entry to /onboarding
-  if (user?.hasCompletedOnboarding && location.pathname === '/onboarding') {
+  // Check if authenticated user intentionally requested to re-run / edit onboarding
+  const searchParams = new URLSearchParams(location.search);
+  const isRerun = searchParams.get('mode') === 'rerun' || (location.state as any)?.mode === 'rerun';
+
+  // If authenticated user has already completed onboarding, block automatic re-entry to /onboarding unless explicitly requesting rerun
+  if (user?.hasCompletedOnboarding && location.pathname === '/onboarding' && !isRerun) {
     return <Navigate to="/dashboard" replace />;
   }
 

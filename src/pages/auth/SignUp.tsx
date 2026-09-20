@@ -82,9 +82,12 @@ export const SignUp: React.FC = () => {
     }
 
     setLoading(true);
+    console.log('[Signup] submit reached');
+    console.log('[Signup] attempting Supabase signup with email:', cleanEmail);
 
     try {
       const result = await signup(cleanName, cleanEmail, password);
+      console.log('[Signup] Supabase signup result:', { requiresEmailConfirmation: result.requiresEmailConfirmation, hasUser: !!result.user });
       if (result.requiresEmailConfirmation) {
         setEmailConfirmationPending(true);
         setRegisteredEmail(cleanEmail);
@@ -92,7 +95,7 @@ export const SignUp: React.FC = () => {
         navigate('/onboarding');
       }
     } catch (err: any) {
-      console.error('[Supabase Auth SignUp Error]', err);
+      console.error('[Signup] Supabase error:', err);
       const rawMsg = err?.message || '';
       if (rawMsg.toLowerCase().includes('already registered') || rawMsg.toLowerCase().includes('user already exists')) {
         setError('An account with this email already exists. Try signing in instead.');
