@@ -312,13 +312,14 @@ export const Dashboard: React.FC = () => {
             onClick={() => navigate('/plans')}
             className="text-xs font-mono text-zinc-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
           >
-            <span>View all 5 plans</span>
+            <span>{plans.length > 0 ? `View all ${plans.length} plan${plans.length === 1 ? "" : "s"}` : "Configure a plan"}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {plans.slice(0, 4).map((plan) => (
+        {plans.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {plans.slice(0, 4).map((plan) => (
             <div
               key={plan.id}
               onClick={() => {
@@ -351,7 +352,14 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+            <p className="text-sm text-zinc-300 font-light">
+              No personal emergency plans configured yet. System crisis scenarios remain available when you activate Shadow.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 6. Prominent Elegant Activate Shadow Trigger Area */}
