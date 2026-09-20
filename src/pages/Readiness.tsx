@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Shield,
   CheckCircle2,
@@ -10,9 +10,53 @@ import {
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
+const RESOLUTION_INTENTS_KEY = 'cognitive-shadow:readiness-resolution-intents';
+
+const readResolutionIntents = (): string[] => {
+  try {
+    const stored = sessionStorage.getItem(RESOLUTION_INTENTS_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeResolutionIntents = (items: string[]) => {
+  try {
+    if (items.length === 0) {
+      sessionStorage.removeItem(RESOLUTION_INTENTS_KEY);
+    } else {
+      sessionStorage.setItem(RESOLUTION_INTENTS_KEY, JSON.stringify(items));
+    }
+  } catch {
+    // Session storage is only a UI acknowledgement mechanism; readiness remains data-driven.
+  }
+};
+
 export const Readiness: React.FC = () => {
   const navigate = useNavigate();
   const { readiness } = useApp();
+  const [recentlyResolved, setRecentlyResolved] = useState<string[]>([]);
+
+  useEffect(() => {
+    const intents = readResolutionIntents();
+    if (intents.length === 0) return;
+
+    const resolved = intents.filter((item) => !readiness.improvements.includes(item));
+    const stillPending = intents.filter((item) => readiness.improvements.includes(item));
+
+    if (resolved.length > 0) {
+      setRecentlyResolved(resolved);
+      writeResolutionIntents(stillPending);
+
+      const timeoutId = window.setTimeout(() => {
+        setRecentlyResolved([]);
+      }, 3500);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [readiness.improvements]);
 
   const statusLabel =
     readiness.overallScore >= 85
@@ -104,7 +148,36 @@ export const Readiness: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Things to Improve: Actionable Safeguards */}
+      {/* 3. Confirmed Resolutions: shown only after the live readiness state clears the gap */}
+      {recentlyResolved.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-emerald-500/80 font-mono font-medium block">
+              Confirmed Changes
+            </span>
+            <h2 className="text-lg font-medium text-white">Recently Resolved</h2>
+          </div>
+
+          <div className="space-y-3">
+            {recentlyResolved.map((item) => (
+              <div
+                key={item}
+                className="p-5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 flex items-center gap-3"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-xs sm:text-sm text-emerald-200 font-medium">{item}</div>
+                  <div className="text-[11px] text-emerald-400/70 font-mono mt-1">
+                    Verified by current readiness data
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. Things to Improve: Actionable Safeguards */}
       {readiness.improvements.length > 0 && (
         <div className="space-y-4">
           <div>
@@ -128,6 +201,11 @@ export const Readiness: React.FC = () => {
                 <button
                   onClick={() => {
                     const lower = item.toLowerCase();
+                    // Record only the user's navigation intent. The green state is shown later
+                    // only if live readiness data confirms that this gap has actually cleared.
+                    const intents = readResolutionIntents();
+                    writeResolutionIntents([...new Set([...intents, item])]);
+
                     // Route each readiness gap to the actual screen where the user can resolve it.
                     if (lower.includes('blood group') || lower.includes('allerg') || lower.includes('medical directives') || lower.includes('emergency directive')) {
                       navigate('/settings');
