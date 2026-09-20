@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { EmergencyPlan, PlanTask } from '../types';
+import { crisisScenarios } from '../data/crisisScenarios';
+import { contextEngine } from '../services/contextEngine';
 
 export const EmergencyPlans: React.FC = () => {
   const navigate = useNavigate();
@@ -123,155 +125,73 @@ export const EmergencyPlans: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Plans List with Distinctive Three-Part Structure */}
-      <div className="space-y-6">
-        {plans.map((plan) => {
-          const isSelected = selectedPlan.id === plan.id;
-          const planDocs = documents.filter((d) => plan.relevantDocuments.includes(d.id));
-          const planPeople = contacts.filter((c) => plan.relevantContacts.includes(c.id));
-
-          return (
-            <div
-              key={plan.id}
-              className={`p-7 sm:p-9 rounded-3xl transition-all duration-300 border relative group ${
-                isSelected
-                  ? 'bg-[#0E121B] border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.06)]'
-                  : 'bg-[#0B0D12] border-white/[0.06] hover:border-white/[0.14]'
-              }`}
-            >
-              {/* Plan Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.06]">
-                <div className="flex items-center gap-4">
-                  <span className="text-3xl sm:text-4xl p-2 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-                    {plan.emoji}
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="text-xl font-medium text-white">
-                        {plan.name}
-                      </h2>
-                      {isSelected && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                          Active Selection
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-400 font-light mt-0.5">
-                      {plan.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 self-start sm:self-auto">
-                  <button
-                    onClick={() => openEditPlan(plan)}
-                    className="px-3.5 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-mono border border-white/[0.08] flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Edit Plan</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      selectPlan(plan.id);
-                      startActivation(plan.id);
-                      navigate('/activation');
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 flex items-center gap-2 transition-all cursor-pointer group/btn shadow-sm"
-                  >
-                    <span>Activate Plan</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Three-Part Structure: What Information Matters, Who Matters, What Needs to be Done */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-                {/* 1. What Information Matters? */}
-                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
-                  <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>WHAT INFORMATION MATTERS</span>
-                    </div>
-                    <span className="text-zinc-500">{planDocs.length}</span>
-                  </div>
-
-                  {planDocs.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-light italic">No documents attached.</p>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-zinc-200 font-light">
-                      {planDocs.map((doc) => (
-                        <li key={doc.id} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
-                          <span className="leading-snug">{doc.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* 2. Who Matters? */}
-                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
-                  <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>WHO MATTERS</span>
-                    </div>
-                    <span className="text-zinc-500">{planPeople.length}</span>
-                  </div>
-
-                  {planPeople.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-light italic">No contacts attached.</p>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-zinc-200 font-light">
-                      {planPeople.map((person) => (
-                        <li key={person.id} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
-                          <span className="leading-snug">
-                            {person.name}{' '}
-                            <span className="text-zinc-500 text-[11px] block">{person.relationship}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* 3. What Needs to be Done? */}
-                <div className="p-5 rounded-2xl bg-white/[0.015] border border-white/[0.04] space-y-3 hover:border-white/[0.08] transition-colors">
-                  <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-                    <div className="flex items-center gap-2">
-                      <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>WHAT NEEDS TO BE DONE</span>
-                    </div>
-                    <span className="text-zinc-500">{plan.defaultTasks.length}</span>
-                  </div>
-
-                  {plan.defaultTasks.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-light italic">No tasks specified.</p>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-zinc-200 font-light">
-                      {plan.defaultTasks.map((task) => (
-                        <li key={task.id} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 mt-1.5 shrink-0" />
-                          <span className="leading-snug">
-                            {task.title}
-                            {task.defaultAssigneeRole && (
-                              <span className="text-[10px] font-mono text-cyan-400/70 block">
-                                → {task.defaultAssigneeRole}
-                              </span>
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
+      {/* 2. Personal Plans + System Crisis Blueprints */}
+      {plans.length > 0 ? (
+        <div className="space-y-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <span className="text-xs uppercase tracking-widest text-zinc-500 font-mono">Personal configuration</span>
+              <h2 className="text-xl font-light text-white mt-1">Your Emergency Plans</h2>
+              <p className="text-xs text-zinc-500 mt-1">Custom response mappings built from your own data.</p>
             </div>
-          );
-        })}
+          </div>
+          {plans.map((plan) => {
+            const isSelected = selectedPlan.id === plan.id;
+            const planDocs = documents.filter((d) => plan.relevantDocuments.includes(d.id));
+            const planPeople = contacts.filter((c) => plan.relevantContacts.includes(c.id));
+            return (
+              <div key={plan.id} className={`p-7 rounded-3xl border ${isSelected ? 'bg-[#0E121B] border-cyan-500/50' : 'bg-[#0B0D12] border-white/[0.06]'}`}>
+                <div className="flex items-center justify-between gap-4 pb-5 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-4">
+                    <span className="text-3xl">{plan.emoji}</span>
+                    <div><h2 className="text-xl font-medium text-white">{plan.name}</h2><p className="text-xs text-zinc-400 mt-1">{plan.description}</p></div>
+                  </div>
+                  <button onClick={() => openEditPlan(plan)} className="px-3.5 py-2.5 rounded-xl bg-white/[0.04] text-zinc-300 text-xs font-mono border border-white/[0.08] flex items-center gap-1.5"><Edit2 className="w-3.5 h-3.5 text-cyan-400" />Edit Plan</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5 text-xs">
+                  <div className="p-4 rounded-2xl bg-white/[0.015] border border-white/[0.04]"><span className="text-zinc-500 font-mono">DOCUMENTS</span><div className="text-lg text-white mt-1">{planDocs.length}</div></div>
+                  <div className="p-4 rounded-2xl bg-white/[0.015] border border-white/[0.04]"><span className="text-zinc-500 font-mono">CONTACTS</span><div className="text-lg text-white mt-1">{planPeople.length}</div></div>
+                  <div className="p-4 rounded-2xl bg-white/[0.015] border border-white/[0.04]"><span className="text-zinc-500 font-mono">PRIORITY TASKS</span><div className="text-lg text-white mt-1">{plan.defaultTasks.length}</div></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-7 rounded-3xl bg-white/[0.015] border border-white/[0.06] space-y-2">
+          <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono uppercase tracking-widest"><Shield className="w-3.5 h-3.5" />Personal plans</div>
+          <h2 className="text-xl font-light text-white">No personal emergency plans configured</h2>
+          <p className="text-sm text-zinc-500 max-w-2xl">Your account has no custom response blueprints yet. The system crisis scenarios below remain available and do not count as personal plans or readiness records.</p>
+        </div>
+      )}
+
+      <div className="space-y-5">
+        <div>
+          <span className="text-xs uppercase tracking-widest text-cyan-400 font-mono">System crisis library</span>
+          <h2 className="text-xl font-light text-white mt-1">Five Crisis Blueprints</h2>
+          <p className="text-xs text-zinc-500 mt-1">These scenarios are always available for activation. The Context Engine applies each one to your real stored information.</p>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Object.values(crisisScenarios).map((scenario) => {
+            const context = contextEngine.generateCrisisContext({ scenario: scenario.id, documents, assets: [], emergencyContacts: contacts, emergencyPlans: plans, profile: undefined });
+            return (
+              <div key={scenario.id} className="p-6 rounded-2xl bg-[#0B0D12] border border-white/[0.06] hover:border-cyan-500/30 transition-colors">
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">{scenario.emoji}</span>
+                  <div className="min-w-0"><h3 className="text-base font-medium text-white">{scenario.name}</h3><p className="text-xs text-zinc-500 mt-1">{scenario.description}</p></div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-5 text-center font-mono text-xs">
+                  <div className="p-3 rounded-xl bg-white/[0.02]"><div className="text-cyan-300 text-lg">{context.relevantDocuments.length}</div><div className="text-zinc-500">docs</div></div>
+                  <div className="p-3 rounded-xl bg-white/[0.02]"><div className="text-cyan-300 text-lg">{context.relevantContacts.length}</div><div className="text-zinc-500">people</div></div>
+                  <div className="p-3 rounded-xl bg-white/[0.02]"><div className="text-cyan-300 text-lg">{context.priorityTasks.length}</div><div className="text-zinc-500">tasks</div></div>
+                </div>
+                <button onClick={() => navigate('/activation')} className="mt-4 w-full px-4 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 flex items-center justify-center gap-2">
+                  Available in Activate Shadow <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Edit Plan Modal */}
