@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 
 export const Settings: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isSupabaseConfigured } = useAuth();
   const {
     documents,
     assets,
@@ -346,8 +346,21 @@ export const Settings: React.FC = () => {
             </p>
             <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
               <div>
+                <span className="font-medium text-white block">Active Backend Engine</span>
+                <span className="text-[11px] text-zinc-500">
+                  {isSupabaseConfigured
+                    ? 'Connected to Supabase Cloud (Row Level Security Active)'
+                    : 'Local Development Fallback (Supabase unconfigured in .env)'}
+                </span>
+              </div>
+              <span className={`font-mono text-xs ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {isSupabaseConfigured ? 'SUPABASE' : 'LOCAL FALLBACK'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
+              <div>
                 <span className="font-medium text-white block">Client-Isolated Storage</span>
-                <span className="text-[11px] text-zinc-500">Keep dossiers bound to client device local state</span>
+                <span className="text-[11px] text-zinc-500">Keep dossiers bound to authenticated user session</span>
               </div>
               <span className="font-mono text-cyan-300 text-xs">Active</span>
             </div>

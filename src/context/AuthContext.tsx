@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, authService } from '../lib/auth';
+import { authBackend, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  authBackend: 'supabase' | 'local_fallback';
+  isSupabaseConfigured: boolean;
   login: (email: string, password: string) => Promise<User>;
   signup: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -20,14 +23,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const session = authService.getSession();
-      setUser(session.user);
-    } catch (e) {
-      console.error('Error loading session', e);
-    } finally {
-      setIsLoading(false);
-    }
+    let authSubscription: { unsubscribe: () => void } | null = null;
+
+    const initAuth = async () => {
+      try {
+        const session = await authService.getSession();
+        setUser(session.user);
+
+        // Listen for real-time auth state changes across browser refreshes & tabs
+        authSubscription = authService.onAuthStateChange((changedUser) => {
+          setUser(changedUser);
+        });
+      } catch (e) {
+        console.error('[Cognitive Shadow] Error loading session:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -82,6 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         isLoading,
+        authBackend,
+        isSupabaseConfigured,
         login,
         signup,
         logout,
