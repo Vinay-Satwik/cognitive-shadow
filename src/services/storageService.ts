@@ -261,26 +261,20 @@ export const getDefaultStoreData = (userId = 'usr-alex-morgan', initialProfile?:
     createdAt: new Date().toISOString()
   };
 
-  const userPlans: EmergencyPlan[] = demoEmergencyPlans.map((p) => ({
-    ...p,
-    id: `${p.id}`,
-    userId,
-    relevantDocuments: [],
-    relevantAssets: [],
-    relevantContacts: []
-  }));
-
+  // Real users start with no personal emergency plans.
+  // The five system scenarios are available through Crisis Activation,
+  // but are not stored as personal plans or counted in readiness.
   return {
     version: CURRENT_STORE_VERSION,
     userProfile: newProfile,
     documents: [],
     assets: [],
     contacts: [],
-    plans: userPlans,
+    plans: [],
     crisisSession: createCrisisSession('plan-auto-accident', newProfile.name, userId),
     temporaryAccessRecords: [],
     mode: 'dormant',
-    selectedPlanId: userPlans[0]?.id || 'plan-auto-accident'
+    selectedPlanId: ''
   };
 };
 
