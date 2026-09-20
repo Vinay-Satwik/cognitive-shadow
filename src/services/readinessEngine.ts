@@ -31,6 +31,9 @@ export const readinessEngine = {
     const hasMedical = documents.some((d) => d.category === 'Medical');
     const hasInsurance = documents.some((d) => d.category === 'Insurance');
     const hasCritical = documents.some((d) => d.emergencyRelevance === 'Critical');
+    const hasProfileMedicalData = Boolean(
+      profile.bloodGroup?.trim() && (profile.medicalNotes?.trim() || profile.emergencyDirective?.trim())
+    );
 
     if (documents.length === 0) {
       docScore = 0;
@@ -42,7 +45,11 @@ export const readinessEngine = {
       }
       if (!hasMedical) {
         docScore -= 25;
-        improvements.push('Add medical directives and blood type records for emergency triage.');
+        improvements.push(
+          hasProfileMedicalData
+            ? 'Upload a supporting medical document for emergency triage.'
+            : 'Add blood type and medical directive information for emergency triage.'
+        );
       }
       if (!hasInsurance) {
         docScore -= 20;
@@ -51,10 +58,7 @@ export const readinessEngine = {
       if (!hasCritical) {
         docScore -= 15;
       }
-      if (documents.length < 5) {
-        docScore -= 10;
-        improvements.push('Add secondary property, vehicle registration, and emergency records.');
-      }
+
     }
     docScore = Math.max(0, Math.min(100, docScore));
 
@@ -142,17 +146,12 @@ export const readinessEngine = {
     const insuranceDocs = documents.filter((d) => d.category === 'Insurance');
 
     if (insuranceDocs.length === 0) {
-      insScore -= 100;
-      improvements.push('Add your health, automobile, or property insurance policy documents.');
-    }
-    if (assets.length > 0 && insuredAssets.length < assets.length) {
-      insScore -= (assets.length - insuredAssets.length) * 15;
-      improvements.push('Attach insurance coverage numbers to all registered physical assets.');
-    }
-    if (assets.length === 0) {
       insScore = 0;
+      improvements.push('Upload at least one active insurance policy document.');
+    } else if (assets.length > 0 && insuredAssets.length < assets.length) {
+      insScore = Math.max(0, 100 - (assets.length - insuredAssets.length) * 15);
+      improvements.push('Attach insurance coverage details to all registered physical assets.');
     }
-    insScore = Math.max(0, Math.min(100, insScore));
 
     const insCategory: ReadinessCategory = {
       name: 'Insurance',
@@ -186,8 +185,8 @@ export const readinessEngine = {
       contribution: '+20% of total score',
       detail: profile.bloodGroup ? `Blood Type: ${profile.bloodGroup}` : 'Incomplete profile',
       reason: profScore >= 85
-        ? `Core personal identity, emergency blood group (${profile.bloodGroup || 'O+'}), and health directives up to date.`
-        : 'Update blood markers and emergency directives in Settings to ensure medical safety.'
+        ? `Core identity, emergency blood group (${profile.bloodGroup}), and medical directives are up to date.`
+        : 'Complete blood group, allergy, and medical directive information in Settings.'
     };
 
     // Overall Weighted Average
