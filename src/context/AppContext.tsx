@@ -19,6 +19,7 @@ import { contextEngine } from '../services/contextEngine';
 import { createCrisisSession } from '../lib/crisisEngine';
 import { useAuth } from './AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { demoEmergencyPlans } from '../data/demoData';
 
 interface AppContextType {
   // Mode & System State
@@ -295,7 +296,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return;
           }
           if (dbPlans && dbPlans.length > 0) {
-            const mappedDbPlans: EmergencyPlan[] = dbPlans.map((p: any): EmergencyPlan => ({
+            const baselinePlanIds = new Set(demoEmergencyPlans.map((p) => p.id));
+            const userConfiguredDbPlans = dbPlans.filter((p: any) => !baselinePlanIds.has(p.id));
+            const mappedDbPlans: EmergencyPlan[] = userConfiguredDbPlans.map((p: any): EmergencyPlan => ({
               id: p.id,
               userId: p.user_id,
               name: p.name || p.scenario_type,
