@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DocumentCategory, EmergencyContact, Asset, Document } from '../types';
 import { cn } from '../lib/utils';
 
@@ -204,17 +205,19 @@ export const Onboarding: React.FC = () => {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const effectiveUserId = user?.id || 'usr-alex-morgan';
     const profileName = name.trim() || user?.name || 'Registered User';
+    const directive = `In the event of medical incapacitation, notify ${contactsList[0]?.name || 'designated emergency proxy'} immediately.`;
 
-    // 1. Save Profile
+    // 1. Save Profile to local memory store
     updateUserProfile({
       name: profileName,
       bloodGroup,
       allergies,
       primaryLocation: location,
       medicalNotes: medicalNotes || (contactsList[0]?.name ? `Advance emergency proxy designated to ${contactsList[0].name}.` : ''),
+      emergencyDirective: directive,
       hasCompletedOnboarding: true,
       userId: effectiveUserId
     });
@@ -283,11 +286,71 @@ export const Onboarding: React.FC = () => {
     // 5. Select active emergency plan
     selectPlan(selectedPlanId);
 
-    // 6. Update Auth session state
-    updateProfile({
-      name: profileName,
-      hasCompletedOnboarding: true,
-    });
+    // 6. Synchronize with Supabase if configured
+    if (isSupabaseConfigured && supabase && user?.id) {
+      try {
+        if (validContacts.length > 0) {
+          await supabase.from('emergency_contacts').insert(
+            validContacts.map((c) => ({
+              user_id: user.id,
+              full_name: c.name,
+              relationship: c.relationship,
+              role: c.role,
+              phone: c.phone,
+              email: c.email,
+              is_primary: c.primary,
+              is_medical_proxy: c.medicalProxy,
+              availability: c.availability,
+              verified: c.verified
+            }))
+          );
+        }
+
+        if (validAssets.length > 0) {
+          await supabase.from('assets').insert(
+            validAssets.map((a) => ({
+              user_id: user.id,
+              name: a.name,
+              category: a.type,
+              registration_or_serial: a.registrationOrSerial,
+              insurer: a.insurance,
+              estimated_value: a.estimatedValue,
+              warranty_status: a.warranty
+            }))
+          );
+        }
+
+        if (validDocs.length > 0) {
+          await supabase.from('documents').insert(
+            validDocs.map((d) => ({
+              user_id: user.id,
+              name: d.name,
+              category: d.category,
+              description: d.description,
+              expiry_date: d.expiryDate,
+              emergency_access_level: d.emergencyRelevance === 'Critical' ? 'Critical' : 'Important'
+            }))
+          );
+        }
+      } catch (cloudErr) {
+        console.warn('[Onboarding] Cloud synchronization note:', cloudErr);
+      }
+    }
+
+    // 7. Update Auth session state with completed onboarding
+    try {
+      await updateProfile({
+        name: profileName,
+        bloodGroup,
+        allergies,
+        primaryLocation: location,
+        medicalNotes: medicalNotes || (contactsList[0]?.name ? `Advance emergency proxy designated to ${contactsList[0].name}.` : ''),
+        emergencyDirective: directive,
+        hasCompletedOnboarding: true
+      });
+    } catch (profErr) {
+      console.warn('[Onboarding] Profile completion notice:', profErr);
+    }
 
     navigate('/dashboard');
   };

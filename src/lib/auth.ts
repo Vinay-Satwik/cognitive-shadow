@@ -1,9 +1,9 @@
 /**
  * Cognitive Shadow Authentication Layer
  * 
- * Clean, production-ready authentication service abstraction.
- * Automatically delegates to Supabase Auth (when credentials exist in .env)
- * or falls back to local storage mock during development.
+ * Production Supabase Auth integration with local development fallback.
+ * Strictly enforces user isolation, Row Level Security, and handles
+ * email confirmation, session restoration, and dynamic profiles.
  */
 
 import { supabase, isSupabaseConfigured, authBackend } from './supabase';
@@ -30,11 +30,17 @@ export interface AuthSession {
   token: string | null;
 }
 
+export interface SignUpResult {
+  user: User | null;
+  requiresEmailConfirmation: boolean;
+  message?: string;
+}
+
 export interface AuthService {
   getSession(): Promise<AuthSession>;
   getCurrentUser(): Promise<User | null>;
   login(email: string, password: string): Promise<User>;
-  signup(name: string, email: string, password: string): Promise<User>;
+  signup(name: string, email: string, password: string): Promise<SignUpResult>;
   logout(): Promise<void>;
   forgotPassword(email: string): Promise<{ success: boolean; message: string }>;
   resetPassword(token: string, newPassword: string): Promise<{ success: boolean }>;
@@ -160,23 +166,52 @@ const supabaseAuthService: AuthService = {
     });
 
     if (error) {
-      throw new Error(error.message || 'Invalid email or password.');
+      const msg = error.message.toLowerCase();
+      if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+        throw new Error('Invalid email or password. Please verify your credentials.');
+      }
+      if (msg.includes('email not confirmed')) {
+        throw new Error('Please confirm your email address before signing in. Check your inbox for the activation link.');
+      }
+      if (msg.includes('failed to fetch') || msg.includes('network')) {
+        throw new Error('Network error: Unable to connect to authentication server. Please check your connection.');
+      }
+      throw new Error(error.message);
     }
 
-    if (!data.user) {
+    if (!data.user || !data.session) {
       throw new Error('Authentication failed.');
     }
 
-    const { data: profile } = await supabase
+    // Load user profile from profiles table
+    let { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .maybeSingle();
 
+    // Fallback profile creation if not created by DB trigger yet
+    if (!profile) {
+      const metaName = data.user.user_metadata?.full_name || data.user.user_metadata?.name || '';
+      const metaFirst = data.user.user_metadata?.first_name || (metaName ? metaName.split(' ')[0] : '');
+      const { data: newProf } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          email: data.user.email || cleanEmail,
+          full_name: metaName,
+          first_name: metaFirst,
+          has_completed_onboarding: false
+        }, { onConflict: 'id' })
+        .select()
+        .maybeSingle();
+      profile = newProf;
+    }
+
     return mapSupabaseProfileToUser(data.user, profile);
   },
 
-  async signup(name: string, email: string, password: string): Promise<User> {
+  async signup(name: string, email: string, password: string): Promise<SignUpResult> {
     if (!supabase) throw new Error('Supabase client is not available.');
     if (!name || !email || !password) throw new Error('All fields are required.');
     if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
@@ -198,6 +233,16 @@ const supabaseAuthService: AuthService = {
     });
 
     if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('already registered') || msg.includes('user already exists')) {
+        throw new Error('An account with this email address already exists. Please sign in instead.');
+      }
+      if (msg.includes('password should be') || msg.includes('weak password')) {
+        throw new Error('Password is too weak. Please use at least 6 characters.');
+      }
+      if (msg.includes('valid email') || msg.includes('invalid email')) {
+        throw new Error('Please enter a valid email address.');
+      }
       throw new Error(error.message || 'Failed to create account.');
     }
 
@@ -205,29 +250,51 @@ const supabaseAuthService: AuthService = {
       throw new Error('User creation returned no user record.');
     }
 
-    // Ensure initial profile record exists
-    try {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email: cleanEmail,
-        full_name: cleanName,
-        first_name: firstName,
-        has_completed_onboarding: false
-      });
-    } catch (upsertErr) {
-      console.warn('[Supabase Auth] Profile upsert notice:', upsertErr);
+    // Check whether an active session was created or email confirmation is required
+    const requiresEmailConfirmation = !data.session;
+
+    let profile = null;
+    if (data.session) {
+      try {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        profile = prof;
+      } catch (err) {
+        console.warn('[Supabase Auth] Profile query note:', err);
+      }
+
+      if (!profile) {
+        try {
+          const { data: newProf } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: cleanEmail,
+              full_name: cleanName,
+              first_name: firstName,
+              has_completed_onboarding: false
+            }, { onConflict: 'id' })
+            .select()
+            .maybeSingle();
+          profile = newProf;
+        } catch (upsertErr) {
+          console.warn('[Supabase Auth] Profile fallback upsert note:', upsertErr);
+        }
+      }
     }
 
-    const user: User = {
-      id: data.user.id,
-      email: cleanEmail,
-      name: cleanName,
-      firstName,
-      hasCompletedOnboarding: false,
-      createdAt: new Date().toISOString()
-    };
+    const user = mapSupabaseProfileToUser(data.user, profile);
 
-    return user;
+    return {
+      user: requiresEmailConfirmation ? null : user,
+      requiresEmailConfirmation,
+      message: requiresEmailConfirmation
+        ? 'Account registered. Please check your email to confirm your account before signing in.'
+        : undefined
+    };
   },
 
   async logout(): Promise<void> {
@@ -245,7 +312,8 @@ const supabaseAuthService: AuthService = {
     if (!supabase) throw new Error('Supabase client is not available.');
     if (!email) throw new Error('Email is required.');
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: `${window.location.origin}/reset-password`
     });
 
@@ -255,11 +323,11 @@ const supabaseAuthService: AuthService = {
 
     return {
       success: true,
-      message: 'Password reset link sent to your email.'
+      message: 'Password reset link sent to your email. Check your inbox to proceed.'
     };
   },
 
-  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean }> {
+  async resetPassword(_token: string, newPassword: string): Promise<{ success: boolean }> {
     if (!supabase) throw new Error('Supabase client is not available.');
     if (!newPassword || newPassword.length < 6) {
       throw new Error('Password must be at least 6 characters.');
@@ -303,14 +371,18 @@ const supabaseAuthService: AuthService = {
 
     const { error } = await supabase
       .from('profiles')
-      .update(profileUpdates)
-      .eq('id', authData.user.id);
+      .upsert({
+        id: authData.user.id,
+        email: authData.user.email,
+        ...profileUpdates
+      }, { onConflict: 'id' });
 
     if (error) {
       console.warn('[Supabase Auth] Failed to update profiles table:', error);
+      throw new Error(error.message);
     }
 
-    // Also update Supabase Auth user metadata
+    // Also sync Supabase Auth user metadata
     if (updates.name) {
       await supabase.auth.updateUser({
         data: {
@@ -351,7 +423,7 @@ const supabaseAuthService: AuthService = {
 
         callback(mapSupabaseProfileToUser(session.user, profile));
       } catch (err) {
-        console.warn('[Supabase Auth] Auth state change profile fetch error:', err);
+        console.warn('[Supabase Auth] Auth state change profile fetch note:', err);
         callback(mapSupabaseProfileToUser(session.user));
       }
     });
@@ -434,7 +506,7 @@ const localAuthService: AuthService = {
     return existingUser;
   },
 
-  async signup(name: string, email: string, password: string): Promise<User> {
+  async signup(name: string, email: string, password: string): Promise<SignUpResult> {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     if (!name || !email || !password) {
@@ -457,7 +529,10 @@ const localAuthService: AuthService = {
         token: 'mock-jwt-token-' + Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-      return existing;
+      return {
+        user: existing,
+        requiresEmailConfirmation: false
+      };
     }
 
     const newUser: User = {
@@ -479,7 +554,10 @@ const localAuthService: AuthService = {
       token: 'mock-jwt-token-' + Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    return newUser;
+    return {
+      user: newUser,
+      requiresEmailConfirmation: false
+    };
   },
 
   async logout(): Promise<void> {

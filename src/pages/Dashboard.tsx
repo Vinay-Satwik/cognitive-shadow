@@ -31,6 +31,14 @@ export const Dashboard: React.FC = () => {
     clearDormantNotification
   } = useApp();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const timeGreeting = getGreeting();
   const fullName = userProfile?.name || user?.name || 'User';
   const firstName = fullName.trim().split(' ')[0] || 'User';
 
@@ -71,7 +79,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-light tracking-tight text-white">
-              Welcome, <span className="font-normal text-zinc-100">{firstName}</span>.
+              {timeGreeting}, <span className="font-normal text-zinc-100">{firstName}</span>.
             </h1>
 
             <p className="text-base sm:text-lg text-zinc-400 font-light max-w-xl leading-relaxed">

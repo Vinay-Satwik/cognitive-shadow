@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, authService } from '../lib/auth';
+import { User, SignUpResult, authService } from '../lib/auth';
 import { authBackend, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
@@ -9,7 +9,7 @@ interface AuthContextType {
   authBackend: 'supabase' | 'local_fallback';
   isSupabaseConfigured: boolean;
   login: (email: string, password: string) => Promise<User>;
-  signup: (name: string, email: string, password: string) => Promise<User>;
+  signup: (name: string, email: string, password: string) => Promise<SignUpResult>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   resetPassword: (token: string, newPassword: string) => Promise<{ success: boolean }>;
@@ -61,12 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string): Promise<SignUpResult> => {
     setIsLoading(true);
     try {
-      const newUser = await authService.signup(name, email, password);
-      setUser(newUser);
-      return newUser;
+      const result = await authService.signup(name, email, password);
+      if (!result.requiresEmailConfirmation && result.user) {
+        setUser(result.user);
+      } else {
+        setUser(null);
+      }
+      return result;
     } finally {
       setIsLoading(false);
     }

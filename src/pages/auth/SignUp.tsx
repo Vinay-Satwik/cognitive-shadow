@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, Mail, User as UserIcon, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, Mail, User as UserIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const SignUp: React.FC = () => {
@@ -12,6 +12,8 @@ export const SignUp: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,8 +21,13 @@ export const SignUp: React.FC = () => {
     setLoading(true);
 
     try {
-      await signup(name, email, password);
-      navigate('/onboarding');
+      const result = await signup(name, email, password);
+      if (result.requiresEmailConfirmation) {
+        setEmailConfirmationPending(true);
+        setRegisteredEmail(email.trim());
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to create account.');
     } finally {
@@ -46,90 +53,118 @@ export const SignUp: React.FC = () => {
       {/* SignUp Card */}
       <div className="max-w-md mx-auto w-full my-auto py-8">
         <div className="p-8 sm:p-10 rounded-3xl bg-[#0B0D12] border border-white/[0.08] space-y-7 shadow-2xl">
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-white">
-              Create Your Shadow
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
-              Organize your documents, contacts, and emergency playbooks before you need them.
-            </p>
-          </div>
+          {emailConfirmationPending ? (
+            <div className="space-y-6 text-center py-2">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-light tracking-tight text-white">
+                  Check Your Email
+                </h1>
+                <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed max-w-sm mx-auto">
+                  A verification link has been sent to <span className="text-cyan-300 font-mono font-medium">{registeredEmail}</span>. Check your email to confirm your account before signing in.
+                </p>
+              </div>
 
-          {error && (
-            <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 flex items-center gap-2.5 text-xs text-rose-300">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{error}</span>
+              <div className="pt-3 border-t border-white/[0.05]">
+                <Link
+                  to="/login"
+                  className="w-full py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-medium text-xs font-mono flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)]"
+                >
+                  <span>Proceed to Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-white">
+                  Create Your Shadow
+                </h1>
+                <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
+                  Organize your documents, contacts, and emergency playbooks before you need them.
+                </p>
+              </div>
+
+              {error && (
+                <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 flex items-center gap-2.5 text-xs text-rose-300">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4 text-xs font-mono">
+                <div className="space-y-1.5">
+                  <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
+                    Full Legal Name
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Full Name"
+                      className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
+                    Secure Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full mt-2 py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-medium text-xs font-mono flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] cursor-pointer disabled:opacity-50"
+                >
+                  <span>{loading ? 'Initializing Shadow...' : 'Create Account & Begin'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              <div className="pt-2 border-t border-white/[0.05] text-center text-xs font-light text-zinc-400">
+                Already have a Cognitive Shadow?{' '}
+                <Link to="/login" className="text-cyan-300 hover:text-cyan-200 font-medium transition-colors">
+                  Sign In
+                </Link>
+              </div>
+            </>
           )}
-
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs font-mono">
-            <div className="space-y-1.5">
-              <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
-                Full Legal Name
-              </label>
-              <div className="relative">
-                <UserIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Alex Morgan"
-                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="alex.morgan@example.com"
-                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-zinc-400 uppercase tracking-wider text-[10px]">
-                Secure Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
-                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-medium text-xs font-mono flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] cursor-pointer disabled:opacity-50"
-            >
-              <span>{loading ? 'Initializing Shadow...' : 'Create Account & Begin'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          <div className="pt-2 border-t border-white/[0.05] text-center text-xs font-light text-zinc-400">
-            Already have a Cognitive Shadow?{' '}
-            <Link to="/login" className="text-cyan-300 hover:text-cyan-200 font-medium transition-colors">
-              Sign In
-            </Link>
-          </div>
         </div>
       </div>
 
