@@ -2,24 +2,29 @@ import React, { useState, useMemo } from 'react';
 import { Sliders, ArrowRight, Sparkles, FileText, Users, FileSpreadsheet, CheckCircle2, Shield } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { contextEngine } from '../services/contextEngine';
+import { crisisScenarios } from '../data/crisisScenarios';
 
 export const CrisisSimulator: React.FC = () => {
   const { plans, documents, contacts, assets, userProfile } = useApp();
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('plan-auto-accident');
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>('plan-auto-accident');
 
-  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
+  // The simulator must always expose the five system crisis scenarios.
+  // Personal emergency plans are optional user data and may legitimately be empty.
+  const scenarios = Object.values(crisisScenarios);
+  const selectedScenario = crisisScenarios[selectedScenarioId] || scenarios[0];
 
-  // Run the EXACT SAME central contextEngine for safe sandbox simulation
+  // Run the same central Context Engine using the selected system scenario plus
+  // any authentic user-configured plan that matches it.
   const contextResult = useMemo(() => {
-    return contextEngine.filter(
-      selectedPlanId,
+    return contextEngine.generateCrisisContext({
+      scenario: selectedScenarioId,
       documents,
       assets,
-      contacts,
-      selectedPlan,
-      userProfile
-    );
-  }, [selectedPlanId, documents, assets, contacts, selectedPlan, userProfile]);
+      emergencyContacts: contacts,
+      emergencyPlans: plans,
+      profile: userProfile
+    });
+  }, [selectedScenarioId, documents, assets, contacts, plans, userProfile]);
 
   return (
     <div className="space-y-12 max-w-5xl">
@@ -60,12 +65,12 @@ export const CrisisSimulator: React.FC = () => {
           Step 1: Select scenario to test
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {plans.map((plan) => {
-            const isSelected = plan.id === selectedPlanId;
+          {scenarios.map((scenario) => {
+            const isSelected = scenario.id === selectedScenarioId;
             return (
               <button
-                key={plan.id}
-                onClick={() => setSelectedPlanId(plan.id)}
+                key={scenario.id}
+                onClick={() => setSelectedScenarioId(scenario.id)}
                 className={`p-4 rounded-2xl text-left border transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-white/[0.08] border-cyan-400/60 text-white shadow-sm'
@@ -143,7 +148,7 @@ export const CrisisSimulator: React.FC = () => {
                   AFTER CONTEXT IS APPLIED
                 </span>
                 <span className="text-[11px] font-mono text-cyan-300">
-                  {selectedPlan.emoji} {selectedPlan.name}
+                  {selectedScenario.emoji} {selectedScenario.name}
                 </span>
               </div>
               <h3 className="text-lg font-medium text-white">
