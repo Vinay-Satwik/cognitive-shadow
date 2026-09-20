@@ -93,10 +93,10 @@ export const CrisisActivation: React.FC = () => {
                 <span className="text-3xl">{scenario.emoji}</span>
                 <div>
                   <h2 className="text-base font-medium text-zinc-100">
-                    {plan.name}
+                    {scenario.name}
                   </h2>
                   <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                    {plan.description}
+                    {scenario.description}
                   </p>
                 </div>
               </div>
