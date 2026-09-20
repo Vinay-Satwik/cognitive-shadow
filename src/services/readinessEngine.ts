@@ -56,7 +56,7 @@ export const readinessEngine = {
         improvements.push('Add secondary property, vehicle registration, and emergency records.');
       }
     }
-    docScore = Math.max(15, Math.min(100, docScore));
+    docScore = Math.max(0, Math.min(100, docScore));
 
     const docCategory: ReadinessCategory = {
       name: 'Documents',
@@ -95,7 +95,7 @@ export const readinessEngine = {
         contactScore -= unverifiedCount * 5;
       }
     }
-    contactScore = Math.max(10, Math.min(100, contactScore));
+    contactScore = Math.max(0, Math.min(100, contactScore));
 
     const contactCategory: ReadinessCategory = {
       name: 'Contacts',
@@ -124,7 +124,7 @@ export const readinessEngine = {
         planScore -= (4 - plans.length) * 8;
       }
     }
-    planScore = Math.max(20, Math.min(100, planScore));
+    planScore = Math.max(0, Math.min(100, planScore));
 
     const planCategory: ReadinessCategory = {
       name: 'Emergency Plans',
@@ -142,7 +142,7 @@ export const readinessEngine = {
     const insuranceDocs = documents.filter((d) => d.category === 'Insurance');
 
     if (insuranceDocs.length === 0) {
-      insScore -= 40;
+      insScore -= 100;
       improvements.push('Add your health, automobile, or property insurance policy documents.');
     }
     if (assets.length > 0 && insuredAssets.length < assets.length) {
@@ -150,9 +150,9 @@ export const readinessEngine = {
       improvements.push('Attach insurance coverage numbers to all registered physical assets.');
     }
     if (assets.length === 0) {
-      insScore -= 10;
+      insScore = 0;
     }
-    insScore = Math.max(15, Math.min(100, insScore));
+    insScore = Math.max(0, Math.min(100, insScore));
 
     const insCategory: ReadinessCategory = {
       name: 'Insurance',
@@ -178,7 +178,7 @@ export const readinessEngine = {
     if (!profile.medicalNotes && !profile.emergencyDirective) {
       profScore -= 15;
     }
-    profScore = Math.max(20, Math.min(100, profScore));
+    profScore = Math.max(0, Math.min(100, profScore));
 
     const profCategory: ReadinessCategory = {
       name: 'Profile',
