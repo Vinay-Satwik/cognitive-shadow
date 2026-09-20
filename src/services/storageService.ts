@@ -121,6 +121,142 @@ export const getDefaultStoreData = (userId = 'usr-alex-morgan', initialProfile?:
     createdAt: new Date().toISOString()
   };
 
+  // New users begin with no personal emergency plans. The five system scenarios
+  // remain available for crisis activation, but they are not treated as configured
+  // user plans and therefore do not contribute to readiness until the user saves one.
+  return {
+    version: CURRENT_STORE_VERSION,
+    userProfile: newProfile,
+    documents: [],
+    assets: [],
+    contacts: [],
+    plans: [],
+    crisisSession: createCrisisSession('plan-auto-accident', newProfile.name, userId),
+    temporaryAccessRecords: [],
+    mode: 'dormant',
+    selectedPlanId: 'plan-auto-accident'
+  };* Cognitive Shadow Central Storage Service
+ * 
+ * Versioned local persistence layer with strict user data isolation.
+ * Every record is associated with the authenticated user's userId.
+ * Clean abstraction allowing straightforward replacement with Supabase
+ * queries and Row Level Security (RLS).
+ */
+
+import {
+  UserProfile,
+  Document,
+  Asset,
+  EmergencyContact,
+  EmergencyPlan,
+  CrisisSession,
+  SecureAccess,
+  AppMode
+} from '../types';
+import {
+  demoDocuments,
+  demoAssets,
+  demoEmergencyContacts,
+  demoEmergencyPlans
+} from '../data/demoData';
+import { createCrisisSession } from '../lib/crisisEngine';
+
+export const STORE_STORAGE_KEY = 'cs_store_v2';
+export const CURRENT_STORE_VERSION = 2;
+
+export interface AppStoreData {
+  version: number;
+  userProfile: UserProfile;
+  documents: Document[];
+  assets: Asset[];
+  contacts: EmergencyContact[];
+  plans: EmergencyPlan[];
+  crisisSession: CrisisSession;
+  temporaryAccessRecords: SecureAccess[];
+  mode: AppMode;
+  selectedPlanId: string;
+}
+
+export const defaultUserProfile: UserProfile = {
+  id: 'usr-alex-morgan',
+  userId: 'usr-alex-morgan',
+  name: 'Alex Morgan',
+  email: 'alex.morgan@shadowops.internal',
+  phone: '+1 (555) 382-9901',
+  bloodGroup: 'O+',
+  allergies: 'Penicillin, Cephalosporins',
+  medicalNotes: 'Asthma inhaler in travel kit. Advance medical proxy designated to Rahul Morgan.',
+  emergencyDirective: 'In the event of medical incapacitation, notify Rahul Morgan immediately. Advance directive on file.',
+  primaryLocation: 'San Francisco, CA',
+  hasCompletedOnboarding: true,
+  createdAt: '2025-01-01T00:00:00Z'
+};
+
+export const defaultAccessRecords: SecureAccess[] = [
+  {
+    id: 'acc-101',
+    userId: 'usr-alex-morgan',
+    recipient: 'Rahul Morgan',
+    recipientEmail: 'rahul.morgan@example.com',
+    documents: ['Vehicle Insurance Policy', 'Vehicle Registration (RC)'],
+    expiration: '24 hours',
+    status: 'Active',
+    createdAt: 'Today, 10:05 AM'
+  },
+  {
+    id: 'acc-102',
+    userId: 'usr-alex-morgan',
+    recipient: 'National Insurance Adjuster',
+    recipientEmail: 'claims@insurancecorp.example',
+    documents: ['Vehicle Insurance Policy'],
+    expiration: '12 hours',
+    status: 'Active',
+    createdAt: 'Today, 10:12 AM'
+  }
+];
+
+export function getUserStorageKey(userId: string): string {
+  return `${STORE_STORAGE_KEY}_${userId}`;
+}
+
+/**
+ * Generate fresh baseline data for a given user.
+ * Demo accounts get seed records; new users start with clean, unpolluted data.
+ */
+export const getDefaultStoreData = (userId = 'usr-alex-morgan', initialProfile?: Partial<UserProfile>): AppStoreData => {
+  const isDemo = userId === 'usr-alex-morgan' || initialProfile?.email?.toLowerCase().includes('alex.morgan');
+
+  if (isDemo) {
+    return {
+      version: CURRENT_STORE_VERSION,
+      userProfile: { ...defaultUserProfile, userId },
+      documents: demoDocuments.map((d) => ({ ...d, userId })),
+      assets: demoAssets.map((a) => ({ ...a, userId })),
+      contacts: demoEmergencyContacts.map((c) => ({ ...c, userId })),
+      plans: demoEmergencyPlans.map((p) => ({ ...p, userId })),
+      crisisSession: createCrisisSession('plan-auto-accident', 'Alex Morgan', userId),
+      temporaryAccessRecords: defaultAccessRecords.map((a) => ({ ...a, userId })),
+      mode: 'dormant',
+      selectedPlanId: 'plan-auto-accident'
+    };
+  }
+
+  // Clean slate for new registered user
+  const newProfile: UserProfile = {
+    id: userId,
+    userId,
+    name: initialProfile?.name || 'Registered User',
+    email: initialProfile?.email || '',
+    phone: initialProfile?.phone || '',
+    bloodGroup: initialProfile?.bloodGroup || '',
+    allergies: initialProfile?.allergies || '',
+    medicalNotes: initialProfile?.medicalNotes || '',
+    emergencyDirective: initialProfile?.emergencyDirective || '',
+    primaryLocation: initialProfile?.primaryLocation || '',
+    hasCompletedOnboarding: initialProfile?.hasCompletedOnboarding || false,
+    createdAt: new Date().toISOString()
+  };
+
   const userPlans: EmergencyPlan[] = demoEmergencyPlans.map((p) => ({
     ...p,
     id: `${p.id}`,
