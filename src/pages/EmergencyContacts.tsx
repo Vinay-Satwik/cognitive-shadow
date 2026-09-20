@@ -31,6 +31,7 @@ export const EmergencyContacts: React.FC = () => {
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Primary Proxy');
   const [availability, setAvailability] = useState('Immediate 24/7');
@@ -44,7 +45,8 @@ export const EmergencyContacts: React.FC = () => {
     setEditingContactId(null);
     setName('');
     setRelationship('Family Member');
-    setPhone('+1 (555) 000-0000');
+    setCountryCode('+91');
+    setPhone('');
     setEmail('contact@example.com');
     setRole('Emergency Coordinator');
     setAvailability('Immediate 24/7');
@@ -58,7 +60,16 @@ export const EmergencyContacts: React.FC = () => {
     setEditingContactId(contact.id);
     setName(contact.name);
     setRelationship(contact.relationship);
-    setPhone(contact.phone);
+    const phoneMatch = contact.phone.match(/^\+(\d{1,3})(.*)$/);
+    if (phoneMatch) {
+      const knownCodes = ['+91', '+1', '+44', '+61', '+65', '+971', '+81', '+49', '+33', '+39', '+86', '+94', '+880'];
+      const matchedCode = knownCodes.find((code) => contact.phone.startsWith(code));
+      setCountryCode(matchedCode || `+${phoneMatch[1]}`);
+      setPhone((matchedCode ? contact.phone.slice(matchedCode.length) : phoneMatch[2]).replace(/\D/g, ''));
+    } else {
+      setCountryCode('+91');
+      setPhone(contact.phone.replace(/\D/g, ''));
+    }
     setEmail(contact.email);
     setRole(contact.role);
     setAvailability(contact.availability);
@@ -71,12 +82,15 @@ export const EmergencyContacts: React.FC = () => {
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    const nationalDigits = phone.replace(/\D/g, '');
+    if (nationalDigits.length < 6 || nationalDigits.length > 15) return;
+    const normalizedPhone = `${countryCode}${nationalDigits}`;
 
     if (editingContactId) {
       updateContact(editingContactId, {
         name: name.trim(),
         relationship: relationship.trim(),
-        phone: phone.trim(),
+        phone: normalizedPhone,
         email: email.trim(),
         role: role.trim(),
         availability: availability.trim(),
@@ -324,14 +338,38 @@ export const EmergencyContacts: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-zinc-400 block mb-1.5 uppercase text-[10px]">Phone Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+1 (555) 000-0000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="w-[112px] shrink-0 bg-[#08090C] border border-white/[0.08] rounded-xl px-2.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                      aria-label="Country calling code"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+65">🇸🇬 +65</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+81">🇯🇵 +81</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+39">🇮🇹 +39</option>
+                      <option value="+86">🇨🇳 +86</option>
+                      <option value="+94">🇱🇰 +94</option>
+                      <option value="+880">🇧🇩 +880</option>
+                    </select>
+                    <input
+                      type="tel"
+                      required
+                      inputMode="tel"
+                      placeholder={countryCode === '+91' ? '98765 43210' : 'Phone number'}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9\s()-]/g, ''))}
+                      className="min-w-0 flex-1 bg-[#08090C] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-cyan-500/50"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-zinc-500">Stored securely in international format: {countryCode}{phone.replace(/\D/g, '') || '…'}</p>
                 </div>
 
                 <div>
