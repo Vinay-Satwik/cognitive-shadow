@@ -77,8 +77,8 @@ export const CrisisSimulator: React.FC = () => {
                     : 'bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
                 }`}
               >
-                <span className="text-2xl block mb-2">{plan.emoji}</span>
-                <span className="text-xs font-medium block truncate">{plan.name}</span>
+                <span className="text-2xl block mb-2">{scenario.emoji}</span>
+                <span className="text-xs font-medium block truncate">{scenario.name}</span>
               </button>
             );
           })}
