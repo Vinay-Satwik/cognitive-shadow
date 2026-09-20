@@ -420,3 +420,12 @@ CREATE POLICY "Users can update own timeline events" ON public.timeline_events
 
 CREATE POLICY "Users can delete own timeline events" ON public.timeline_events
   FOR DELETE USING (auth.uid() = user_id);
+
+-- ==============================================================================
+-- 13. ROLE GRANTS (Permit PostgREST anon & authenticated access filtered by RLS)
+-- ==============================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;

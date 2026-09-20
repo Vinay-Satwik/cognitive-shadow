@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Lock, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const ResetPassword: React.FC = () => {
@@ -11,21 +11,34 @@ export const ResetPassword: React.FC = () => {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handlePasswordChange = (val: string) => {
+    setPassword(val);
+    if (error) setError(null);
+  };
+
+  const handleConfirmPasswordChange = (val: string) => {
+    setConfirmPassword(val);
+    if (error) setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
 
@@ -37,7 +50,8 @@ export const ResetPassword: React.FC = () => {
         navigate('/login');
       }, 2000);
     } catch (err: any) {
-      setError(err?.message || 'Failed to reset password.');
+      console.error('[Supabase Auth Reset Password Error]', err);
+      setError(err?.message || 'Failed to reset password. The recovery link may be expired.');
     } finally {
       setLoading(false);
     }
@@ -94,13 +108,21 @@ export const ResetPassword: React.FC = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-11 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -111,13 +133,21 @@ export const ResetPassword: React.FC = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     required
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => handleConfirmPasswordChange(e.target.value)}
                     placeholder="Repeat new password"
-                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-11 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -126,7 +156,7 @@ export const ResetPassword: React.FC = () => {
                 disabled={loading}
                 className="w-full mt-2 py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-medium text-xs font-mono flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] cursor-pointer disabled:opacity-50"
               >
-                <span>{loading ? 'Saving...' : 'Set Password & Sign In'}</span>
+                <span>{loading ? 'Saving password...' : 'Set Password & Sign In'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -140,7 +170,7 @@ export const ResetPassword: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer Disclaimer */}
       <div className="max-w-md mx-auto w-full text-center text-[11px] font-mono text-zinc-600">
         Cognitive Shadow • Personal Crisis Operating System
       </div>

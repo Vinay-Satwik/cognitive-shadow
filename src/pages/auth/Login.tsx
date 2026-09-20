@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Lock, Mail, AlertCircle, Shield } from 'lucide-react';
+import { ArrowRight, Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const Login: React.FC = () => {
@@ -10,25 +10,63 @@ export const Login: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || '/dashboard';
 
+  const handleEmailChange = (val: string) => {
+    setEmail(val);
+    if (error) setError(null);
+  };
+
+  const handlePasswordChange = (val: string) => {
+    setPassword(val);
+    if (error) setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Please enter your email address.');
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await login(email, password);
+      const user = await login(cleanEmail, password);
       if (!user.hasCompletedOnboarding) {
         navigate('/onboarding', { replace: true });
       } else {
         navigate(from, { replace: true });
       }
     } catch (err: any) {
-      setError(err?.message || 'Invalid email or password.');
+      console.error('[Supabase Auth Login Error]', err);
+      const rawMsg = err?.message || '';
+      if (rawMsg.toLowerCase().includes('invalid login credentials') || rawMsg.toLowerCase().includes('invalid credentials')) {
+        setError('Invalid email or password.');
+      } else if (rawMsg.toLowerCase().includes('email not confirmed')) {
+        setError('Please verify your email before signing in.');
+      } else if (rawMsg.toLowerCase().includes('network') || rawMsg.toLowerCase().includes('failed to fetch')) {
+        setError('Unable to connect to the authentication service. Please try again.');
+      } else {
+        setError(rawMsg || 'Invalid email or password.');
+      }
     } finally {
       setLoading(false);
     }
@@ -79,7 +117,7 @@ export const Login: React.FC = () => {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleEmailChange(e.target.value)}
                   placeholder="name@example.com"
                   className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
                 />
@@ -101,13 +139,21 @@ export const Login: React.FC = () => {
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
+                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-11 py-3 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors font-sans text-xs"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -116,7 +162,7 @@ export const Login: React.FC = () => {
               disabled={loading}
               className="w-full mt-2 py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-medium text-xs font-mono flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] cursor-pointer disabled:opacity-50"
             >
-              <span>{loading ? 'Authenticating...' : 'Enter Shadow'}</span>
+              <span>{loading ? 'Signing in...' : 'Enter Shadow'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
