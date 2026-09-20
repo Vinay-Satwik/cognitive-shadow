@@ -20,16 +20,18 @@ import { contextEngine } from '../services/contextEngine';
 
 export const EmergencyPlans: React.FC = () => {
   const navigate = useNavigate();
-  const { plans, selectedPlan, selectPlan, startActivation, documents, contacts, updatePlan } = useApp();
+  const { plans, selectedPlan, selectPlan, startActivation, documents, contacts, assets, addPlan, updatePlan } = useApp();
 
   // Edit Plan modal state
   const [editingPlan, setEditingPlan] = useState<EmergencyPlan | null>(null);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [formName, setFormName] = useState('');
   const [formEmoji, setFormEmoji] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formDocIds, setFormDocIds] = useState<string[]>([]);
   const [formContactIds, setFormContactIds] = useState<string[]>([]);
   const [formTasks, setFormTasks] = useState<PlanTask[]>([]);
+  const [formAssetIds, setFormAssetIds] = useState<string[]>([]);
 
   // Task inline add
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -44,6 +46,7 @@ export const EmergencyPlans: React.FC = () => {
     setFormDocIds([...plan.relevantDocuments]);
     setFormContactIds([...plan.relevantContacts]);
     setFormTasks([...plan.defaultTasks]);
+    setFormAssetIds([...(plan.relevantAssets || [])]);
     setNewTaskTitle('');
     setNewTaskRole('');
   };
@@ -75,6 +78,36 @@ export const EmergencyPlans: React.FC = () => {
 
   const handleRemoveTask = (taskId: string) => {
     setFormTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
+  const openCreatePlan = () => {
+    setIsCreatingPlan(true);
+    setEditingPlan(null);
+    setFormName('');
+    setFormEmoji('📋');
+    setFormDescription('');
+    setFormDocIds([]);
+    setFormContactIds([]);
+    setFormAssetIds([]);
+    setFormTasks([]);
+    setNewTaskTitle('');
+    setNewTaskRole('');
+  };
+
+  const handleCreatePlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+    addPlan({
+      name: formName.trim(),
+      emoji: formEmoji.trim() || '📋',
+      description: formDescription.trim(),
+      relevantDocuments: formDocIds,
+      relevantAssets: formAssetIds,
+      relevantContacts: formContactIds,
+      defaultTasks: formTasks,
+      sharingRules: []
+    });
+    setIsCreatingPlan(false);
   };
 
   const handleSavePlan = (e: React.FormEvent) => {
@@ -193,6 +226,29 @@ export const EmergencyPlans: React.FC = () => {
           })}
         </div>
       </div>
+
+      {isCreatingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl bg-[#0C0E14] border border-white/[0.1] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+              <div><h3 className="text-lg font-medium text-white">Configure Personal Emergency Plan</h3><p className="text-xs font-mono text-zinc-400 mt-1">Choose what information should surface for a specific situation.</p></div>
+              <button onClick={() => setIsCreatingPlan(false)} className="p-1.5 text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleCreatePlan} className="space-y-5 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <input value={formEmoji} onChange={e=>setFormEmoji(e.target.value)} className="bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-center text-lg" aria-label="Plan emoji" />
+                <input required value={formName} onChange={e=>setFormName(e.target.value)} placeholder="Plan name *" className="sm:col-span-3 bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-zinc-200" />
+              </div>
+              <textarea value={formDescription} onChange={e=>setFormDescription(e.target.value)} placeholder="Describe the situation and response plan" rows={2} className="w-full bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200" />
+              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Documents</label><div className="max-h-32 overflow-y-auto space-y-1">{documents.map(doc=><label key={doc.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formDocIds.includes(doc.id)} onChange={()=>toggleDocSelection(doc.id)} />{doc.name}</label>)}</div></div>
+              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Contacts</label><div className="max-h-32 overflow-y-auto space-y-1">{contacts.map(contact=><label key={contact.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formContactIds.includes(contact.id)} onChange={()=>toggleContactSelection(contact.id)} />{contact.name} ({contact.relationship})</label>)}</div></div>
+              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Relevant Assets</label><div className="max-h-32 overflow-y-auto space-y-1">{assets.map(asset=><label key={asset.id} className="flex gap-2 p-2 text-zinc-300"><input type="checkbox" checked={formAssetIds.includes(asset.id)} onChange={()=>setFormAssetIds(prev=>prev.includes(asset.id)?prev.filter(id=>id!==asset.id):[...prev,asset.id])} />{asset.name}</label>)}</div></div>
+              <div><label className="text-cyan-400 block mb-2 uppercase text-[10px]">Priority Tasks</label><div className="space-y-2">{formTasks.map(task=><div key={task.id} className="flex justify-between p-2 bg-white/[0.02] rounded-lg text-zinc-300"><span>{task.title}</span><button type="button" onClick={()=>handleRemoveTask(task.id)}><Trash2 className="w-3.5 h-3.5 text-zinc-500" /></button></div>)}</div><div className="flex gap-2 mt-2"><input value={newTaskTitle} onChange={e=>setNewTaskTitle(e.target.value)} placeholder="Priority task" className="flex-1 bg-[#08090C] border border-white/[0.08] rounded-xl px-3 py-2" /><button type="button" onClick={handleAddTask} className="px-3 rounded-xl border border-cyan-500/30 text-cyan-300"><Plus className="w-3.5 h-3.5" /></button></div></div>
+              <div className="flex justify-end gap-3 pt-3 border-t border-white/[0.06]"><button type="button" onClick={()=>setIsCreatingPlan(false)} className="px-4 py-2 text-zinc-400">Cancel</button><button type="submit" className="px-5 py-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Create Personal Plan</button></div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Plan Modal */}
       {editingPlan && (
