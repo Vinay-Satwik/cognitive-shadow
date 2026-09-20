@@ -100,7 +100,7 @@ export const Dashboard: React.FC = () => {
                 <span className="text-4xl sm:text-5xl font-light text-white font-mono tracking-tight group-hover:text-cyan-300 transition-colors">
                   {readiness.overallScore}%
                 </span>
-                <span className="text-xs font-mono text-cyan-400 font-semibold">OPTIMAL</span>
+                <span className="text-xs font-mono text-cyan-400 font-semibold">{readiness.subtitle}</span>
               </div>
               <div className="text-[11px] text-zinc-500 font-mono">
                 Prepared before the unexpected
