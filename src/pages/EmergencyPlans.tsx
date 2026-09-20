@@ -194,7 +194,14 @@ export const EmergencyPlans: React.FC = () => {
         <div className="p-7 rounded-3xl bg-white/[0.015] border border-white/[0.06] space-y-2">
           <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono uppercase tracking-widest"><Shield className="w-3.5 h-3.5" />Personal plans</div>
           <h2 className="text-xl font-light text-white">No personal emergency plans configured</h2>
-          <p className="text-sm text-zinc-500 max-w-2xl">Your account has no custom response blueprints yet. The system crisis scenarios below remain available and do not count as personal plans or readiness records.</p>
+          <p className="text-sm text-zinc-500 max-w-2xl">Your account has no custom response blueprint yet. Configure one to map your own documents, contacts, assets and priority tasks to a specific situation.</p>
+          <button
+            onClick={openCreatePlan}
+            className="mt-3 px-4 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono border border-cyan-500/30 inline-flex items-center gap-2"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Configure Personal Plan
+          </button>
         </div>
       )}
 
