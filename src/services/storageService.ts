@@ -314,26 +314,14 @@ export const storageService = {
             })
           }));
 
-          // Migrate previously seeded system scenario templates out of a real user's
-          // personal readiness data. System scenarios remain available for activation,
-          // but only explicitly configured user plans should count as personal plans.
-          const baselinePlanIds = new Set(demoEmergencyPlans.map((p) => p.id));
-          const onlyBaselinePlans =
-            parsed.plans.length > 0 &&
-            parsed.plans.every((p) => baselinePlanIds.has(p.id)) &&
-            parsed.plans.every(
-              (p) =>
-                p.relevantDocuments.length === 0 &&
-                p.relevantAssets.length === 0 &&
-                p.relevantContacts.length === 0
-            );
-
-          if (
-            effectiveUserId !== 'usr-alex-morgan' &&
-            onlyBaselinePlans
-          ) {
-            parsed.plans = [];
-            parsed.selectedPlanId = '';
+          // Remove system/demo scenario templates from real users' personal plan
+          // collection. User-created plans use their own generated IDs and are preserved.
+          if (effectiveUserId !== 'usr-alex-morgan') {
+            const baselinePlanIds = new Set(demoEmergencyPlans.map((p) => p.id));
+            parsed.plans = parsed.plans.filter((p) => !baselinePlanIds.has(p.id));
+            if (parsed.selectedPlanId && baselinePlanIds.has(parsed.selectedPlanId)) {
+              parsed.selectedPlanId = parsed.plans[0]?.id || '';
+            }
           }
 
           if (parsed.crisisSession) parsed.crisisSession.userId = effectiveUserId;
