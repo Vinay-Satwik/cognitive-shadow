@@ -173,10 +173,22 @@ export const readinessEngine = {
 
     // 5. Profile Score Calculation (Weight: 20%)
     let profScore = 100;
-    if (!profile.name || profile.name.trim() === '') profScore -= 25;
-    if (!profile.bloodGroup || profile.bloodGroup.trim() === '') {
+    const validBloodGroups = new Set(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
+    const hasValidName = /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(profile.name?.trim() || '');
+    const hasValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email?.trim() || '');
+    const hasValidBloodGroup = validBloodGroups.has(profile.bloodGroup?.trim() || '');
+
+    if (!hasValidName) {
+      profScore -= 20;
+      improvements.push('Enter a valid primary name in Profile Settings.');
+    }
+    if (!hasValidEmail) {
+      profScore -= 10;
+      improvements.push('Enter a valid account email in Profile Settings.');
+    }
+    if (!hasValidBloodGroup) {
       profScore -= 25;
-      improvements.push('Specify your emergency blood group in Profile Settings.');
+      improvements.push('Specify a valid emergency blood group in Profile Settings.');
     }
     if (!profile.allergies || profile.allergies.trim() === '') {
       profScore -= 20;
@@ -191,10 +203,10 @@ export const readinessEngine = {
       name: 'Profile',
       score: profScore,
       contribution: '+20% of total score',
-      detail: profile.bloodGroup ? `Blood Type: ${profile.bloodGroup}` : 'Incomplete profile',
+      detail: hasValidBloodGroup ? `Blood Type: ${profile.bloodGroup}` : 'Incomplete or invalid emergency markers',
       reason: profScore >= 85
         ? `Core identity, emergency blood group (${profile.bloodGroup}), and medical directives are up to date.`
-        : 'Complete blood group, allergy, and medical directive information in Settings.'
+        : 'Complete valid identity, blood group, allergy, and medical directive information in Settings.'
     };
 
     // Overall Weighted Average
