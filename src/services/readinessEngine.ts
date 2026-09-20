@@ -41,6 +41,7 @@ export const readinessEngine = {
     const hasProfileMedicalData = Boolean(
       profile.bloodGroup?.trim() && (profile.medicalNotes?.trim() || profile.emergencyDirective?.trim())
     );
+    const hasMedicalCoverage = hasMedical || hasProfileMedicalData;
 
     if (documents.length === 0) {
       docScore = 0;
@@ -50,7 +51,7 @@ export const readinessEngine = {
         docScore -= 20;
         improvements.push('Add an official government ID or passport to your vault.');
       }
-      if (!hasMedical) {
+      if (!hasMedicalCoverage) {
         docScore -= 25;
         improvements.push(
           hasProfileMedicalData
