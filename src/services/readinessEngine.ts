@@ -27,9 +27,16 @@ export const readinessEngine = {
 
     // 1. Documents Score Calculation (Weight: 20%)
     let docScore = 100;
-    const hasIdentity = documents.some((d) => d.category === 'Identity');
-    const hasMedical = documents.some((d) => d.category === 'Medical');
-    const hasInsurance = documents.some((d) => d.category === 'Insurance');
+    const documentText = (d: Document) => `${d.name || ''} ${d.description || ''}`.toLowerCase();
+    const hasIdentity = documents.some((d) =>
+      d.category === 'Identity' || /passport|identity|aadhaar|aadhar|driving licence|driver license|pan card|government id/.test(documentText(d))
+    );
+    const hasMedical = documents.some((d) =>
+      d.category === 'Medical' || /medical|health|blood|allerg|directive|prescription|hospital|medication/.test(documentText(d))
+    );
+    const hasInsurance = documents.some((d) =>
+      d.category === 'Insurance' || /insurance|policy|insurer|coverage/.test(documentText(d))
+    );
     const hasCritical = documents.some((d) => d.emergencyRelevance === 'Critical');
     const hasProfileMedicalData = Boolean(
       profile.bloodGroup?.trim() && (profile.medicalNotes?.trim() || profile.emergencyDirective?.trim())
