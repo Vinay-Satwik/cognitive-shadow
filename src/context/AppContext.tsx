@@ -295,38 +295,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.warn('[Plans Sync] Error loading emergency plans from Supabase:', error.message);
             return;
           }
-          if (dbPlans && dbPlans.length > 0) {
-            const baselinePlanIds = new Set(demoEmergencyPlans.map((p) => p.id));
-            const userConfiguredDbPlans = dbPlans.filter((p: any) => !baselinePlanIds.has(p.id));
-            const mappedDbPlans: EmergencyPlan[] = userConfiguredDbPlans.map((p: any): EmergencyPlan => ({
-              id: p.id,
-              userId: p.user_id,
-              name: p.name || p.scenario_type,
-              emoji: p.emoji || '🛡️',
-              description: p.description || '',
-              scenario: p.scenario_type || p.name,
-              relevantDocuments: Array.isArray(p.relevant_document_ids) ? p.relevant_document_ids.map(String) : [],
-              relevantAssets: Array.isArray(p.relevant_asset_ids) ? p.relevant_asset_ids.map(String) : [],
-              relevantContacts: Array.isArray(p.relevant_contact_ids) ? p.relevant_contact_ids.map(String) : [],
-              defaultTasks: Array.isArray(p.default_tasks) ? p.default_tasks : [],
-              sharingRules: Array.isArray(p.sharing_rules) ? p.sharing_rules : []
-            }));
+          const baselinePlanIds = new Set(demoEmergencyPlans.map((p) => p.id));
+          const baselinePlanNames = new Set(
+            demoEmergencyPlans.flatMap((p) => [p.id, p.name, p.scenario].filter(Boolean).map((v) => String(v).trim().toLowerCase()))
+          );
 
-            setPlans((prevPlans) => {
-              const merged = [...prevPlans];
-              for (const dbPlan of mappedDbPlans) {
-                const existingIdx = merged.findIndex(
-                  (ep) => ep.id === dbPlan.id || ep.name === dbPlan.name || ep.scenario === dbPlan.scenario
-                );
-                if (existingIdx >= 0) {
-                  merged[existingIdx] = { ...merged[existingIdx], ...dbPlan };
-                } else {
-                  merged.push(dbPlan);
-                }
-              }
-              return merged;
-            });
-          }
+          // Supabase is authoritative for personal plans. Never merge system/demo
+          // scenario templates into the user's personal readiness state.
+          const userConfiguredDbPlans = (dbPlans || []).filter((p: any) => {
+            const id = String(p.id || '').trim();
+            const name = String(p.name || '').trim().toLowerCase();
+            const scenario = String(p.scenario_type || '').trim().toLowerCase();
+            return !baselinePlanIds.has(id) && !baselinePlanNames.has(name) && !baselinePlanNames.has(scenario);
+          });
+
+          const mappedDbPlans: EmergencyPlan[] = userConfiguredDbPlans.map((p: any): EmergencyPlan => ({
+            id: p.id,
+            userId: p.user_id,
+            name: p.name || p.scenario_type,
+            emoji: p.emoji || '🛡️',
+            description: p.description || '',
+            scenario: p.scenario_type || p.name,
+            relevantDocuments: Array.isArray(p.relevant_document_ids) ? p.relevant_document_ids.map(String) : [],
+            relevantAssets: Array.isArray(p.relevant_asset_ids) ? p.relevant_asset_ids.map(String) : [],
+            relevantContacts: Array.isArray(p.relevant_contact_ids) ? p.relevant_contact_ids.map(String) : [],
+            defaultTasks: Array.isArray(p.default_tasks) ? p.default_tasks : [],
+            sharingRules: Array.isArray(p.sharing_rules) ? p.sharing_rules : []
+          }));
+
+          // Replace the local state with the authoritative personal-plan set.
+          setPlans(mappedDbPlans);
         });
 
       // 5. Hydrate real secure shares from Supabase
