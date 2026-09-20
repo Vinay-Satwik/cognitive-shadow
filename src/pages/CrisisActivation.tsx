@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Flame, X, FileText, Users, CheckSquare, FileCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { contextEngine } from '../services/contextEngine';
+import { crisisScenarios } from '../data/crisisScenarios';
 
 export const CrisisActivation: React.FC = () => {
   const navigate = useNavigate();
@@ -21,20 +22,26 @@ export const CrisisActivation: React.FC = () => {
   const [isActivating, setIsActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamically compute contextual results using the central contextEngine
+  // System crisis scenarios are always available. Personal Emergency Plans are optional
+  // user data and may legitimately be empty; matching plans can customize a scenario.
+  const scenarios = Object.values(crisisScenarios);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>('plan-auto-accident');
+  const selectedScenario = crisisScenarios[selectedScenarioId] || scenarios[0];
+
   const preview = useMemo(() => {
     return contextEngine.generateCrisisContext({
-      scenario: selectedPlan.id,
+      scenario: selectedScenarioId,
       documents,
       assets,
       emergencyContacts: contacts,
       emergencyPlans: plans,
       profile: userProfile
     });
-  }, [selectedPlan, documents, assets, contacts, userProfile, plans]);
+  }, [selectedScenarioId, documents, assets, contacts, userProfile, plans]);
 
   const handleActivate = async () => {
     if (isActivating) return;
+    selectPlan(selectedScenarioId);
     setIsActivating(true);
     setError(null);
     try {
@@ -70,12 +77,12 @@ export const CrisisActivation: React.FC = () => {
 
       {/* 2. Large Scenario Choices */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {plans.map((plan) => {
-          const isSelected = plan.id === selectedPlan.id;
+        {scenarios.map((scenario) => {
+          const isSelected = scenario.id === selectedScenarioId;
           return (
             <div
-              key={plan.id}
-              onClick={() => selectPlan(plan.id)}
+              key={scenario.id}
+              onClick={() => setSelectedScenarioId(scenario.id)}
               className={`p-5 rounded-2xl cursor-pointer transition-all border text-left ${
                 isSelected
                   ? 'bg-white/[0.08] border-cyan-400/80 shadow-[0_0_20px_rgba(6,182,212,0.15)] text-white'
@@ -83,7 +90,7 @@ export const CrisisActivation: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-3.5">
-                <span className="text-3xl">{plan.emoji}</span>
+                <span className="text-3xl">{scenario.emoji}</span>
                 <div>
                   <h2 className="text-base font-medium text-zinc-100">
                     {plan.name}
@@ -133,7 +140,7 @@ export const CrisisActivation: React.FC = () => {
         </div>
 
         <p className="text-xs text-zinc-500 pt-1">
-          Scenario selected: <strong className="text-zinc-300">{selectedPlan.name}</strong> •{' '}
+          Scenario selected: <strong className="text-zinc-300">{selectedScenario.name}</strong> •{' '}
           {preview.relevantDocuments.length} files will surface from your vault of {documents.length} records.
         </p>
       </div>
