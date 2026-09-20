@@ -45,7 +45,8 @@ export const CrisisActivation: React.FC = () => {
     setIsActivating(true);
     setError(null);
     try {
-      await confirmCrisisActivation(selectedPlan.id);
+      // Pass the scenario the user actually selected. selectPlan() updates React state asynchronously, so using selectedPlan here could still reference the previous scenario (typically Automobile Accident).
+      await confirmCrisisActivation(selectedScenarioId);
       navigate('/crisis');
     } catch (err: any) {
       console.error('[Crisis Activation Error]', err);
